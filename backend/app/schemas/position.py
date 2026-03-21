@@ -8,7 +8,9 @@ class PositionSnapshotData(BaseModel):
     status: str = Field(..., description="Estado atual da senha na fila.")
     position: int | None = Field(
         default=None,
-        description="Posição atual na fila; fica nula quando o atendimento já terminou.",
+        description=(
+            "Posição atual na fila; fica nula quando o atendimento já terminou."
+        ),
     )
     people_ahead: int | None = Field(
         default=None,

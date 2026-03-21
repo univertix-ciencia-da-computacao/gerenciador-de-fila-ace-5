@@ -20,3 +20,11 @@ class ConfigurationError(AppException):
 class ExternalServiceError(AppException):
     def __init__(self, message: str = "Falha ao acessar serviço externo.") -> None:
         super().__init__(message, status_code=502, code="EXTERNAL_SERVICE_ERROR")
+
+
+class FeatureNotImplementedError(AppException):
+    def __init__(
+        self,
+        message: str = "Funcionalidade prevista, mas ainda não implementada.",
+    ) -> None:
+        super().__init__(message, status_code=501, code="NOT_IMPLEMENTED")

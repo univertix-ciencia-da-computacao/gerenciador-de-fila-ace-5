@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
+from app.core.config import Settings, get_settings
 from app.schemas.websocket import WebSocketClientMessage, WebSocketServerMessage
 from app.services.queue_service import QueueService, get_queue_service
 from app.services.websocket_manager import ConnectionManager, get_connection_manager
@@ -33,57 +34,45 @@ async def _send_error(
     )
 
 
-async def _send_initial_snapshot(
+async def _send_queue_snapshot(
     *,
     websocket: WebSocket,
-    channel: str,
-    resource_id: str,
+    unit_id: str,
     queue_service: QueueService,
     connection_manager: ConnectionManager,
-) -> bool:
-    if channel == "queue":
-        snapshot = queue_service.get_queue_snapshot(resource_id)
-        await connection_manager.send(
-            websocket,
-            WebSocketServerMessage(
-                type="queue.snapshot",
-                channel="queue",
-                resource_id=resource_id,
-                data=snapshot.model_dump(),
-            ),
-        )
-        return True
-
-    position_snapshot = queue_service.try_get_position_snapshot(resource_id)
-    if position_snapshot is None:
-        await _send_error(
-            websocket,
-            connection_manager,
-            code="POSITION_NOT_FOUND",
-            message="Token de posição não encontrado para assinatura.",
-            resource_id=resource_id,
-        )
-        return False
-
+) -> None:
+    snapshot = queue_service.get_queue_snapshot(unit_id)
     await connection_manager.send(
         websocket,
         WebSocketServerMessage(
-            type="position.snapshot",
-            channel="position",
-            resource_id=resource_id,
-            data=position_snapshot.model_dump(),
+            type="queue.snapshot",
+            channel="queue",
+            resource_id=unit_id,
+            data=snapshot.model_dump(),
         ),
     )
-    return True
 
 
 @router.websocket("/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
+    settings: Settings = Depends(get_settings),
     queue_service: QueueService = Depends(get_queue_service),
     connection_manager: ConnectionManager = Depends(get_connection_manager),
 ) -> None:
     client_id = await connection_manager.connect(websocket)
+
+    if not settings.supabase_enabled:
+        await _send_error(
+            websocket,
+            connection_manager,
+            code="CONFIGURATION_ERROR",
+            message="SUPABASE_URL e SUPABASE_KEY são obrigatórios para operar a fila.",
+        )
+        await websocket.close(code=1013, reason="Supabase não configurado")
+        connection_manager.disconnect(websocket)
+        return
+
     await connection_manager.send(
         websocket,
         WebSocketServerMessage(
@@ -145,12 +134,15 @@ async def websocket_endpoint(
                 continue
 
             if client_message.type == "subscribe":
-                if channel == "position" and queue_service.try_get_position_snapshot(resource_id) is None:
+                if channel == "position":
                     await _send_error(
                         websocket,
                         connection_manager,
-                        code="POSITION_NOT_FOUND",
-                        message="Token de posição não encontrado para assinatura.",
+                        code="NOT_IMPLEMENTED",
+                        message=(
+                            "O canal de posição está previsto, mas será "
+                            "implementado."
+                        ),
                         resource_id=resource_id,
                     )
                     continue
@@ -165,10 +157,9 @@ async def websocket_endpoint(
                         data={"ok": True},
                     ),
                 )
-                await _send_initial_snapshot(
+                await _send_queue_snapshot(
                     websocket=websocket,
-                    channel=channel,
-                    resource_id=resource_id,
+                    unit_id=resource_id,
                     queue_service=queue_service,
                     connection_manager=connection_manager,
                 )

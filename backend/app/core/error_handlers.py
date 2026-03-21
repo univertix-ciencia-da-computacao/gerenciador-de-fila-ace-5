@@ -34,7 +34,10 @@ async def app_exception_handler(_: Request, exc: AppException) -> JSONResponse:
     )
 
 
-async def validation_exception_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
+async def validation_exception_handler(
+    _: Request,
+    exc: RequestValidationError,
+) -> JSONResponse:
     details = [
         {
             "field": ".".join(str(part) for part in error["loc"] if part != "body"),
@@ -50,7 +53,10 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError) 
     )
 
 
-async def http_exception_handler(_: Request, exc: StarletteHTTPException) -> JSONResponse:
+async def http_exception_handler(
+    _: Request,
+    exc: StarletteHTTPException,
+) -> JSONResponse:
     return _build_error_response(
         status_code=exc.status_code,
         code="HTTP_ERROR",

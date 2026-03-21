@@ -1,3 +1,19 @@
+# Gerenciador de Fila - ACE 5
+
+Projeto acadêmico para gestão de filas em postos de saúde, com interface web, back-end em Python/FastAPI, integração com Supabase e comunicação em tempo real via WebSocket.
+
+## Escopo desta etapa
+
+Esta etapa está focada principalmente em:
+
+- estrutura do projeto
+- separação por camadas
+- contratos iniciais da API
+- integração base com Supabase
+- base para comunicação via WebSocket
+
+As regras de negócio mais completas da fila ficam para próximas PRs.
+
 ## Decisão de arquitetura para comunicação
 
 Para manter o projeto simples e consistente, o backend segue a regra:
@@ -34,6 +50,7 @@ Usado apenas para:
 - Pydantic Settings
 - Docker
 - Docker Compose
+- Ruff
 
 ## Estrutura do projeto
 
@@ -55,6 +72,8 @@ Usado apenas para:
 │   │   ├── position.py
 │   │   ├── queue.py
 │   │   └── websocket.py
+│   ├── repositories/
+│   │   └── queue_repository.py
 │   ├── services/
 │   │   ├── queue_service.py
 │   │   ├── supabase_service.py
@@ -67,7 +86,9 @@ Usado apenas para:
 ├── docker-compose.yml
 ├── Dockerfile
 ├── main.py
+├── pyproject.toml
 ├── README.md
+├── requirements-dev.txt
 └── requirements.txt
 ```
 
@@ -76,12 +97,15 @@ Usado apenas para:
 - `app/core/`: configurações centrais, exceções da aplicação e tratamento padronizado de erros.
 - `app/routes/`: endpoints HTTP e endpoint WebSocket expostos para o front.
 - `app/schemas/`: contratos de entrada e saída da API, usados para validação e documentação.
-- `app/services/`: regras de negócio da fila, gerenciamento de conexões WebSocket e integração com Supabase.
+- `app/repositories/`: acesso a dados e queries no Supabase.
+- `app/services/`: regras de negócio da fila, provider do client Supabase e gerenciamento de conexões WebSocket.
 - `app/main.py`: montagem da aplicação FastAPI e registro das rotas.
 - `supabase/`: SQL inicial para criar as tabelas usadas pelo projeto.
 - `.env.example`: exemplo de configuração para copiar como `.env`.
 - `Dockerfile`: imagem da aplicação para container.
 - `docker-compose.yml`: sobe a API com a configuração do projeto.
+- `pyproject.toml`: configuração das ferramentas Python, incluindo o Ruff.
+- `requirements-dev.txt`: dependências de desenvolvimento, como lint.
 - `requirements.txt`: dependências Python do back-end.
 
 ## Configuração de ambiente
@@ -92,6 +116,8 @@ Para começar, o `.env` pode ter apenas:
 SUPABASE_URL=https://your-project-id.supabase.co
 SUPABASE_KEY=your-supabase-key
 ```
+
+> Essas duas variáveis são obrigatórias para operar a fila, consultar posições e usar o WebSocket.
 
 ## Execução local com Python
 
@@ -114,7 +140,7 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-4. Se for usar Supabase de verdade, ajuste pelo menos:
+4. Ajuste as credenciais obrigatórias do Supabase:
 
 - `SUPABASE_URL`
 - `SUPABASE_KEY`
@@ -125,11 +151,31 @@ cp .env.example .env
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
+## Lint e formatação com Ruff
+
+Instale as dependências de desenvolvimento:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+Executar lint:
+
+```bash
+ruff check .
+```
+
+Aplicar formatação:
+
+```bash
+ruff format .
+```
+
 ## Execução com Docker
 
 ```bash
 cp .env.example .env
-# ajuste SUPABASE_URL e SUPABASE_KEY se necessário
+# ajuste SUPABASE_URL e SUPABASE_KEY
 docker compose up --build
 ```
 
@@ -180,7 +226,7 @@ POST /api/v1/queue/entries
 Content-Type: application/json
 ```
 
-Payload:
+Payload previsto:
 
 ```json
 {
@@ -191,55 +237,7 @@ Payload:
 }
 ```
 
-Resposta resumida:
-
-```json
-{
-  "success": true,
-  "message": "Pessoa adicionada à fila com sucesso.",
-  "data": {
-    "entry": {
-      "ticket": "A001",
-      "person_name": "Maria da Silva",
-      "unit_id": "default",
-      "priority": false,
-      "category": "clinico-geral",
-      "status": "waiting",
-      "position_token": "TOKEN_GERADO",
-      "position_path": "/api/v1/position/TOKEN_GERADO",
-      "created_at": "2026-03-21T00:00:00+00:00",
-      "called_at": null,
-      "finished_at": null
-    },
-    "position": {
-      "token": "TOKEN_GERADO",
-      "unit_id": "default",
-      "ticket": "A001",
-      "status": "waiting",
-      "position": 1,
-      "people_ahead": 0,
-      "current_ticket": null,
-      "position_path": "/api/v1/position/TOKEN_GERADO"
-    },
-    "queue": {
-      "unit_id": "default",
-      "current_ticket": null,
-      "current_entry": null,
-      "last_called": null,
-      "waiting_count": 1,
-      "queue": [
-        {
-          "ticket": "A001",
-          "person_name": "Maria da Silva",
-          "priority": false,
-          "category": "clinico-geral",
-          "status": "waiting"
-        }
-      ]
-    }
-  }
-}
-```
+> O endpoint existe como scaffold e atualmente retorna `501 Not Implemented`.
 
 ### Chamar próxima senha
 
@@ -248,13 +246,15 @@ POST /api/v1/queue/call-next
 Content-Type: application/json
 ```
 
-Payload:
+Payload previsto:
 
 ```json
 {
   "unit_id": "default"
 }
 ```
+
+> O endpoint existe como scaffold e atualmente retorna `501 Not Implemented`.
 
 ### Finalizar atendimento atual
 
@@ -263,13 +263,15 @@ POST /api/v1/queue/finish-current
 Content-Type: application/json
 ```
 
-Payload:
+Payload previsto:
 
 ```json
 {
   "unit_id": "default"
 }
 ```
+
+> O endpoint existe como scaffold e atualmente retorna `501 Not Implemented`.
 
 ### Consultar posição de uma senha
 
@@ -283,6 +285,8 @@ Exemplo:
 GET /api/v1/position/TOKEN_GERADO
 ```
 
+> O endpoint existe como scaffold e atualmente retorna `501 Not Implemented`.
+
 ## Contrato WebSocket
 
 ### Endpoint
@@ -295,8 +299,9 @@ ws://127.0.0.1:8000/api/v1/ws
 
 - um único endpoint WebSocket
 - cliente envia apenas `subscribe`, `unsubscribe` e `ping`
-- servidor responde com `connected`, `subscribed`, `unsubscribed`, `pong`, `queue.snapshot`, `position.snapshot` e `error`
-- após qualquer mudança via HTTP, o backend publica novos snapshots para os inscritos
+- servidor responde com `connected`, `subscribed`, `unsubscribed`, `pong`, `queue.snapshot` e `error`
+- O canal `queue` já funciona como scaffold estrutural
+- o canal `position` está previsto no contrato, mas ainda não foi implementado
 
 ### Mensagem inicial do servidor
 
@@ -371,7 +376,7 @@ Cliente envia:
 }
 ```
 
-Servidor envia `subscribed` e depois `position.snapshot`.
+O servidor responde com erro `NOT_IMPLEMENTED`, deixando o contrato preparado para a próxima etapa.
 
 ### Ping/Pong
 
@@ -419,16 +424,8 @@ socket.onmessage = (event) => {
 
 O arquivo `supabase/schema.sql` cria três tabelas iniciais:
 
-- `queue_entries`: estado atual das senhas
-- `queue_events`: auditoria das ações da fila
-- `qr_links`: mapeamento entre token e consulta de posição
+- `queue_entries`: estrutura base para armazenar o estado atual das senhas
+- `queue_events`: estrutura de auditoria das ações da fila
+- `qr_links`: estrutura de mapeamento entre token e consulta de posição
 
-Se as credenciais do Supabase não estiverem configuradas, a API continua funcionando localmente com estado em memória, e a saúde da API indica que o Supabase não está configurado.
-
-## Observação importante
-
-Nesta versão inicial:
-
-- o estado da fila fica em memória no backend
-- o Supabase é usado como persistência inicial/auditoria quando configurado
-- a comunicação em tempo real foi simplificada para snapshots completos
+As credenciais do Supabase são obrigatórias para operar a fila. Sem `SUPABASE_URL` e `SUPABASE_KEY`, a API ainda sobe para health check e documentação, mas as operações de fila, posição e WebSocket retornam erro de configuração.

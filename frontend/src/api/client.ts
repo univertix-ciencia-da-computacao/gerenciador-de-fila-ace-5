@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:8000/api'; // URL FastAPI backend
+const BASE_URL = import.meta.env.VITE_API_URL as string;
 
 export async function fetchClient<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const defaultHeaders = {

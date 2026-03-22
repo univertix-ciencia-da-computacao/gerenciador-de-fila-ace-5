@@ -1,4 +1,4 @@
-# Logs
+# ─── Logs ────────────────────────────────────────────────────────────────────
 logs
 *.log
 npm-debug.log*
@@ -7,18 +7,42 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
+# ─── Build ───────────────────────────────────────────────────────────────────
 dist
 dist-ssr
 *.local
 
-# Editor directories and files
+# ─── Dependências ────────────────────────────────────────────────────────────
+node_modules
+
+# ─── Variáveis de Ambiente ───────────────────────────────────────────────────
+# NUNCA commitar arquivos .env reais — somente .env.example vai ao repositório
+.env
+.env.*
+!.env.example
+
+# ─── TypeScript ──────────────────────────────────────────────────────────────
+*.tsbuildinfo
+
+# ─── Editores e IDEs ─────────────────────────────────────────────────────────
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# ─── Cache / temporários ─────────────────────────────────────────────────────
+.cache
+.parcel-cache
+.eslintcache
+.stylelintcache
+.npm
+
+# ─── Vite ────────────────────────────────────────────────────────────────────
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*

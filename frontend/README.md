@@ -29,6 +29,9 @@ frontend/
 │   ├── components/
 │   │   ├── BotaoEntrar/      # Botão de login/entrada
 │   │   └── BotaoVoltar/      # Botão de navegação de volta
+│   │   └── Sidebar/          # Nova Sidebar 
+│   │   └── Header/           # Novo Header
+│   │   └── ActivityCard/     # Novo Card de atividades
 │   ├── hooks/
 │   │   └── useFila.ts        # Hook React Query para buscar a fila
 │   ├── layouts/
@@ -36,6 +39,7 @@ frontend/
 │   ├── pages/
 │   │   ├── Home/             # Página de login (pública)
 │   │   └── Teste/            # Página de teste — exibe fila da API (privada)
+│   │   └── TelaInicial/      # Página de Registro de novos pacientes (privada)
 │   ├── routes/
 │   │   └── index.tsx         # Definição de rotas (pública, privada, 404)
 │   ├── App.tsx               # Componente raiz — monta o RouterProvider
@@ -91,6 +95,7 @@ O projeto usa Vite, então **todas as variáveis precisam do prefixo `VITE_`** p
 | Caminho | Tipo | Componente | Descrição |
 |---|---|---|---|
 | `/` | Pública | `Home` | Tela de login |
+|/telainicial |	Privada	| `TelaInicial` | Cadastro de pacientes e visão geral |
 | `/teste` | Privada | `Teste` | Visualização da fila de pacientes |
 | `*` | — | inline | Página 404 |
 
@@ -124,7 +129,7 @@ Para adicionar um novo endpoint:
 { path: '/nome-da-pagina', element: <NomeDaPagina /> }
 ```
 
-3. Adicione o link na sidebar em `src/layouts/DefaultLayout.tsx`:
+3. Adicione o link na sidebar em `src/components/Sidebar/index.tsx`:
 
 ```tsx
 <NavLink to="/nome-da-pagina">🏥 Nome da Página</NavLink>

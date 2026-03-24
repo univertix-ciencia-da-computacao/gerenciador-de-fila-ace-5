@@ -3,18 +3,17 @@ import { createBrowserRouter } from 'react-router-dom';
 import DefaultLayout from '../layouts/DefaultLayout';
 import Home from '../pages/Home';
 import Teste from '../pages/Teste';
+import TelaInicial from '@/pages/TelaInicial'; // Nota: certifique-se de que o alias '@' está configurado no seu vite.config.ts / tsconfig.json
 
 export const router = createBrowserRouter([
 
-  // Rota pública
-
+  // Rota pública (Fora do Layout padrão, tela cheia)
   {
     path: '/',
     element: <Home />,
   },
 
-  // Rotas privadas (dentro do DefaultLayout)
-
+  // Rotas privadas (Todas essas vão renderizar DENTRO do DefaultLayout)
   {
     element: <DefaultLayout />,
     children: [
@@ -22,16 +21,19 @@ export const router = createBrowserRouter([
         path: '/teste',
         element: <Teste />,
       },
-
-      // adicionar novas páginas aqui à medida que forem criadas
-      // Exemplo:
-      // { path: '/fila',      element: <Fila /> }
-
+      {
+        path: '/telainicial',
+        element: <TelaInicial />,
+      },
+      // Para adicionar mais telas no futuro, é só continuar a lista aqui:
+      // {
+      //   path: '/fila-ao-vivo',
+      //   element: <FilaAoVivo />,
+      // },
     ],
   },
 
-  //Fallback
-  
+  // Fallback (Página 404)
   {
     path: '*',
     element: (

@@ -1,11 +1,12 @@
 import { useNavigate } from 'react-router-dom';
+import { Hospital } from 'lucide-react';
 import BotaoEntrar from '../../components/BotaoEntrar';
 
 export default function Home() {
   const navigate = useNavigate();
 
   const handleEntrar = () => {
-    navigate('/teste');
+    navigate('/telainicial');
   };
 
   return (
@@ -16,8 +17,8 @@ export default function Home() {
         
      
         <div className="mb-6">
-          <div className="bg-blue-100 text-blue-700 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
-            🏥
+          <div className="bg-blue-100 text-blue-700 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Hospital size={32} strokeWidth={2} />
           </div>
           <h1 className="text-3xl font-extrabold text-gray-800">PSF Central</h1>
           <p className="text-gray-500 mt-2">Sistema de Gerenciamento de Filas</p>

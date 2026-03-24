@@ -1,38 +1,62 @@
 import React, { useState } from 'react';
-import { PlusCircle, User, Clock } from 'lucide-react';
-import ActivityCard, { type NivelUrgencia } from '@/components/ActivityCard';
+import { PlusCircle, User } from 'lucide-react';
+import ActivityCard from '@/components/ActivityCard';
+import { type Entry } from '@/api/types/fila'; 
 
-type Categoria = 'Clínica Geral' | 'Cardiologia' | 'Ortopedia';
+type Categoria = 'clinico-geral' | 'cardiologia' | 'ortopedia';
 
 export default function TelaInicial() {
   const [nome, setNome] = useState('');
-  const [urgencia, setUrgencia] = useState<NivelUrgencia>('Normal');
-  const [categoria, setCategoria] = useState<Categoria>('Clínica Geral');
-
-  //Vai ter coisa aqui: 
+  const [urgencia, setUrgencia] = useState<boolean>(false); // Prioridade é Booleana
+  const [categoria, setCategoria] = useState<Categoria>('clinico-geral');
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-  // Boa sorte galera do back
+    // Objeto que a doc pede
+    const payload = {
+      person_name: nome,
+      unit_id: "default", 
+      priority: urgencia,  
+      category: categoria
+    };
 
-    console.log('Enviando para a API:', { nome, urgencia, categoria });
-    setNome(''); 
+    console.log('Enviando para POST /api/v1/queue/entries:', payload);
+    
+    // Resetando os campos
+    setNome('');
+    setUrgencia(false);
   };
 
-  // Fazer com que a lista via useEffect busque no Websocket e retone a fila
-  const atividadesMock = [
-    { id: '1', nome: 'Elena Rodriguez', categoria: 'Cardiologia', tempoAtras: '2m atrás', urgencia: 'Emergência' as NivelUrgencia },
-    { id: '2', nome: 'Marcus Sterling', categoria: 'Clínica Geral', tempoAtras: '14m atrás', urgencia: 'Normal' as NivelUrgencia },
-    { id: '3', nome: 'Jonathan Wu', categoria: 'Ortopedia', tempoAtras: '35m atrás', urgencia: 'Urgente' as NivelUrgencia },
+  // Mock demonstrativo, ainda tenho que alterar a partir do momento que ouver dados reais
+  const atividadesMock: Entry[] = [
+    { 
+      ticket: 'A001', 
+      person_name: 'Elena Rodriguez', 
+      unit_id: 'default', 
+      category: 'Cardiologia', 
+      created_at: new Date().toISOString(), 
+      priority: true, 
+      status: 'waiting',
+      position_token: 'tok1'
+    },
+    { 
+      ticket: 'B004', 
+      person_name: 'Marcus Sterling', 
+      unit_id: 'default', 
+      category: 'Clínica Geral', 
+      created_at: new Date().toISOString(), 
+      priority: false, 
+      status: 'called', 
+      position_token: 'tok2'
+    },
   ];
 
   return (
     <div className="p-8 pt-4 flex flex-col xl:flex-row gap-8">
-      
       <div className="flex-1 max-w-3xl">
         <div className="mb-8">
           <h1 className="text-4xl font-extrabold text-blue-800 mb-2">Novo Cadastro de Paciente</h1>
-          <p className="text-slate-500">Cadastre o Paciente</p>
+          <p className="text-slate-500">Sistema PSF Central</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
@@ -57,26 +81,25 @@ export default function TelaInicial() {
             <div className="flex-1">
               <label className="block text-xs font-bold text-blue-900 mb-2 uppercase tracking-wide">Nível de Urgência</label>
               <select 
-                value={urgencia}
-                onChange={(e) => setUrgencia(e.target.value as NivelUrgencia)}
+                value={urgencia ? "Sim" : "Não"}
+                onChange={(e) => setUrgencia(e.target.value === "Sim")}
                 className="w-full px-4 py-3.5 bg-slate-50 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none text-slate-700 font-medium transition-all"
               >
-                <option value="Normal">Normal</option>
-                <option value="Urgente">Urgente</option>
-                <option value="Emergência">Emergência</option>
+                <option value="Não">Normal</option>
+                <option value="Sim">Prioritário (Urgente/Emergência)</option>
               </select>
             </div>
             <div className="flex-1">
-              <label className="block text-xs font-bold text-blue-900 mb-2 uppercase tracking-wide">Categoria / Especialidade</label>
+              <label className="block text-xs font-bold text-blue-900 mb-2 uppercase tracking-wide">Categoria</label>
               <select 
                 value={categoria}
                 onChange={(e) => setCategoria(e.target.value as Categoria)}
                 className="w-full px-4 py-3.5 bg-slate-50 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none text-slate-700 font-medium transition-all"
               >
-                {/*Puxar as categoria do banco */}
-                <option value="Clínica Geral">Clínica Geral</option>
-                <option value="Cardiologia">Cardiologia</option>
-                <option value="Ortopedia">Ortopedia</option>
+                {/*Puxar as categoria do banco de dados*/}
+                <option value="clinico-geral">Clínica Geral</option>
+                <option value="cardiologia">Cardiologia</option>
+                <option value="ortopedia">Ortopedia</option>
               </select>
             </div>
           </div>
@@ -88,43 +111,32 @@ export default function TelaInicial() {
         </form>
 
         <div className="flex gap-6">
-          <div className="flex-1 bg-orange-50/50 p-6 rounded-2xl border border-orange-100 flex flex-col justify-center">
+          {/* Card: Total de pessoas aguardando */}
+          <div className="flex-1 bg-orange-50/50 p-6 rounded-2xl border border-orange-100 flex flex-col justify-center transition-all hover:shadow-md">
             <p className="text-xs font-bold text-orange-800 mb-1 uppercase tracking-wide">Na Fila</p>
-            {/* Implementar contagem de fila */}
+            {/* O valor '14' virá do 'waiting_count' da API/WebSocket futuramente */}
             <p className="text-4xl font-extrabold text-orange-900">14</p>
           </div>
-          <div className="flex-1 bg-blue-50/50 p-6 rounded-2xl border border-blue-100 flex flex-col justify-center">
-            <p className="text-xs font-bold text-blue-800 mb-1 uppercase tracking-wide">Ala Ativa</p>
-            <p className="text-4xl font-extrabold text-blue-900">B-04</p>
+
+          {/* Card: Última senha chamada ou painel atual */}
+          <div className="flex-1 bg-blue-50/50 p-6 rounded-2xl border border-blue-100 flex flex-col justify-center transition-all hover:shadow-md">
+            <p className="text-xs font-bold text-blue-800 mb-1 uppercase tracking-wide">Último Chamado</p>
+            {/* O valor 'B-04' virá do 'current_ticket' da API */}
+            <p className="text-4xl font-extrabold text-blue-900">A-001</p>
           </div>
         </div>
       </div>
 
       <div className="w-full xl:w-96 bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col h-[fit-content]">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="font-bold text-blue-900 text-lg">Atividade Recente</h3>
-          <button className="p-2 hover:bg-slate-50 rounded-full transition-colors">
-            <Clock size={18} className="text-slate-400" />
-          </button>
-        </div>
+        <h3 className="font-bold text-blue-900 text-lg mb-6">Atividade Recente</h3>
 
         <div className="flex-1 space-y-4">
           {atividadesMock.map((atividade) => (
-            <ActivityCard 
-              key={atividade.id}
-              nome={atividade.nome}
-              categoria={atividade.categoria}
-              tempoAtras={atividade.tempoAtras}
-              urgencia={atividade.urgencia}
-            />
+            // Jogando o objeto INTEIRO no card
+            <ActivityCard key={atividade.ticket} data={atividade} />
           ))}
         </div>
-
-        <button className="w-full py-3.5 mt-6 text-blue-700 font-semibold bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
-          Ver Histórico Completo
-        </button>
       </div>
-
     </div>
   );
 }

@@ -3,8 +3,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import DefaultLayout from '../layouts/DefaultLayout';
 import Home from '../pages/Home';
 import Teste from '../pages/Teste';
-import TelaInicial from '@/pages/TelaInicial'; // Nota: certifique-se de que o alias '@' está configurado no seu vite.config.ts / tsconfig.json
-
+import TelaInicial from '@/pages/TelaInicial'; 
 export const router = createBrowserRouter([
 
   // Rota pública (Fora do Layout padrão, tela cheia)

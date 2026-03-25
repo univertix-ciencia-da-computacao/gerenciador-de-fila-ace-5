@@ -1,8 +1,8 @@
 import { createBrowserRouter } from 'react-router-dom';
 
 import DefaultLayout from '../layouts/DefaultLayout';
-import Home from '../pages/Home';
-import Teste from '../pages/Teste';
+import Home from '../pages/Login';
+import Register from '../pages/DashboardAdmin';
 
 export const router = createBrowserRouter([
 
@@ -19,8 +19,8 @@ export const router = createBrowserRouter([
     element: <DefaultLayout />,
     children: [
       {
-        path: '/teste',
-        element: <Teste />,
+        path: '/dashboard',
+        element: <Register />,
       },
 
       // adicionar novas páginas aqui à medida que forem criadas

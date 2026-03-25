@@ -13,34 +13,27 @@ Sistema web de **gerenciamento de filas de atendimento** desenvolvido para o PSF
 | Roteamento | React Router v7 |
 | Cache / Requisições | TanStack React Query v5 |
 | Build | Vite 8 |
+| Notificações | React Hot Toast |
+
 
 ---
 
 ## 📁 Estrutura do Projeto
 
-```
-frontend/
-├── .env.example          # Variáveis de ambiente — copie como .env e preencha
-├── src/
-│   ├── api/
-│   │   ├── client.ts         # Função base de fetch (usa VITE_API_URL do .env)
-│   │   └── types/
-│   │       └── fila.ts       # Interface TypeScript dos dados da fila
-│   ├── components/
-│   │   ├── BotaoEntrar/      # Botão de login/entrada
-│   │   └── BotaoVoltar/      # Botão de navegação de volta
-│   ├── hooks/
-│   │   └── useFila.ts        # Hook React Query para buscar a fila
-│   ├── layouts/
-│   │   └── DefaultLayout.tsx # Layout com sidebar (envolve rotas privadas)
-│   ├── pages/
-│   │   ├── Home/             # Página de login (pública)
-│   │   └── Teste/            # Página de teste — exibe fila da API (privada)
-│   ├── routes/
-│   │   └── index.tsx         # Definição de rotas (pública, privada, 404)
-│   ├── App.tsx               # Componente raiz — monta o RouterProvider
-│   ├── main.tsx              # Entrypoint — configura QueryClient e ReactDOM
-│   └── index.css             # Estilos globais + Tailwind
+```text
+src/
+ ├── api/
+ │    ├── types/      # Interfaces e Contratos de Dados (Entry, Queue, Position)
+ │    ├── errors/     # Tratamento de erros customizados (ApiError)
+ │    └── client.ts   # Wrapper do fetch com tratamento global
+ ├── services/        # Mapeamento de endpoints e métodos HTTP (queueService)
+ ├── hooks/           # Hooks do React Query para lógica de negócio
+ ├── components/      # Componentes globais reutilizáveis (Botões, Inputs)
+ ├── layouts/         # Templates de página (DefaultLayout com Sidebar)
+ ├── pages/           # Páginas da aplicação (Login, Register/Dashboard)
+ │    └── Register/   # Módulo modularizado (Form, List, Stats)
+ ├── routes/          # Definição e proteção de rotas
+ └── App.tsx          # Componente raiz e Providers
 ```
 
 > Cada página e componente vive em sua **própria pasta** com um `index.tsx`, facilitando adicionar arquivos relacionados (estilos, testes, subcomponentes) sem poluir outros diretórios.

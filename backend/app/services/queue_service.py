@@ -20,71 +20,14 @@ class QueueService:
         self.queue_repository = queue_repository
         self.api_prefix = settings.api_prefix
 
-    # --- Helpers de Contexto e Validação (Novos) ---
-
-    def _now(self) -> datetime:
-        """Retorna o timestamp atual em UTC para consistência do banco."""
-        return datetime.now(timezone.utc)
-
-    def _require_entry(self, token: str) -> dict:
-        """Busca uma entrada por token e lança AppException se não existir."""
-        entry = self.queue_repository.fetch_by_token(token)
-        
-        if not entry:
-            # Respeitando a assinatura: message, *, status_code, code
-            raise AppException(
-                message=f"A entrada com o token '{token}' não foi encontrada.",
-                status_code=404,
-                code="ENTRY_NOT_FOUND"
-            )
-        return entry
-
-    def _build_entry_data(self, payload: QueueEntryCreateRequest, token: str, ticket: str) -> dict:
-        """Constrói o dicionário completo para persistência no Supabase."""
-        now_iso = self._now().isoformat()
-        return {
-            "token": token,
-            "ticket": ticket,
-            "unit_id": payload.unit_id,
-            "person_name": payload.person_name,
-            "priority": payload.priority,
-            "category": payload.category,
-            "status": "waiting",
-            "created_at": now_iso,
-            "updated_at": now_iso,
-        }
-
-    # --- Builders Ajustados (Removido @staticmethod) ---
-
-    def _build_entry_summary(self, entry: dict) -> QueueEntrySummary:
-        return QueueEntrySummary(
-            ticket=entry["ticket"],
-            person_name=entry["person_name"],
-            priority=entry["priority"],
-            category=entry.get("category"),
-            status=entry["status"],
-        )
-
-    def _build_current_entry_data(self, entry: dict) -> CurrentQueueEntryData:
-        return CurrentQueueEntryData(
-            ticket=entry["ticket"],
-            person_name=entry["person_name"],
-            priority=entry["priority"],
-            category=entry.get("category"),
-            status=entry["status"],
-            called_at=entry.get("called_at"),
-        )
-
-    # --- Métodos de Negócio ---
-
     def create_entry(self, payload: QueueEntryCreateRequest) -> QueueEntryCreatedResult:
-        raise FeatureNotImplementedError("A criação de entradas será implementada futuramente.")
+        raise FeatureNotImplementedError()
 
     def call_next(self, payload: QueueActionRequest) -> QueueActionResult:
-        raise FeatureNotImplementedError("A chamada da próxima senha será implementada futuramente.")
+        raise FeatureNotImplementedError()
 
     def finish_current(self, payload: QueueActionRequest) -> QueueActionResult:
-        raise FeatureNotImplementedError("A finalização do atendimento será implementada futuramente.")
+        raise FeatureNotImplementedError()
 
     def get_queue_snapshot(self, unit_id: str) -> QueueSnapshotData:
         waiting_entries = self.queue_repository.fetch_waiting_entries(unit_id)
@@ -94,17 +37,78 @@ class QueueService:
         return QueueSnapshotData(
             unit_id=unit_id,
             current_ticket=current_entry["ticket"] if current_entry else None,
-            current_entry=self._build_current_entry_data(current_entry) if current_entry else None,
+            current_entry=self._build_current_entry_data(current_entry)
+            if current_entry
+            else None,
             last_called=last_called_entry["ticket"] if last_called_entry else None,
             waiting_count=len(waiting_entries),
             queue=[self._build_entry_summary(entry) for entry in waiting_entries],
         )
 
     def get_position_snapshot(self, token: str) -> PositionSnapshotData:
-        raise FeatureNotImplementedError("A consulta da posição será implementada futuramente.")
+        self._require_entry(token)
+        raise FeatureNotImplementedError()
 
     def try_get_position_snapshot(self, token: str) -> PositionSnapshotData | None:
         return None
+
+    def _now(self) -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    def _require_entry(self, token: str) -> dict:
+        entrada = self.queue_repository.fetch_queue_entry_by_token(token)
+        
+        if not entrada:
+            raise AppException(
+                message="Token de posição não encontrado.",
+                status_code=404,
+                code="POSITION_NOT_FOUND"
+            )
+        return entrada
+
+    def _build_queue_entry_record(
+        self, 
+        payload: QueueEntryCreateRequest, 
+        qr_token: str, 
+        ticket: str, 
+        ticket_sequence: int
+    ) -> dict:
+        now_iso = self._now()
+        return {
+            "qr_token": qr_token,
+            "ticket_sequence": ticket_sequence,
+            "Ingresso": ticket,
+            "unit_id": payload.unit_id,
+            "person_name": payload.person_name,
+            "Prioridade": payload.priority,
+            "categoria": payload.category,
+            "status": "esperando",
+            "created_at": now_iso,
+            "updated_at": now_iso,
+            "called_at": "Nenhuma",
+            "finished_at": "Nenhum",
+        }
+
+    @staticmethod
+    def _build_entry_summary(entry: dict) -> QueueEntrySummary:
+        return QueueEntrySummary(
+            ticket=entry["ticket"],
+            person_name=entry["person_name"],
+            priority=entry["priority"],
+            category=entry.get("category"),
+            status=entry["status"],
+        )
+
+    @staticmethod
+    def _build_current_entry_data(entry: dict) -> CurrentQueueEntryData:
+        return CurrentQueueEntryData(
+            ticket=entry["ticket"],
+            person_name=entry["person_name"],
+            priority=entry["priority"],
+            category=entry.get("category"),
+            status=entry["status"],
+            called_at=entry.get("called_at"),
+        )
 
 def get_queue_service(
     queue_repository: QueueRepository = Depends(get_queue_repository),

@@ -3,6 +3,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import DefaultLayout from '../layouts/DefaultLayout';
 import Home from '../pages/Home';
 import Teste from '../pages/Teste';
+import FilaAoVivo from '../pages/FilaAoVivo';
 
 export const router = createBrowserRouter([
 
@@ -22,7 +23,10 @@ export const router = createBrowserRouter([
         path: '/teste',
         element: <Teste />,
       },
-
+      {
+        path: '/fila-ao-vivo', // 2. Adicione a rota aqui
+        element: <FilaAoVivo />,
+      },
       // adicionar novas páginas aqui à medida que forem criadas
       // Exemplo:
       // { path: '/fila',      element: <Fila /> }

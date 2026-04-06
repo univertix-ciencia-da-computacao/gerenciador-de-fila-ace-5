@@ -80,7 +80,7 @@ class QueueService:
             "Ingresso": ticket,
             "unit_id": payload.unit_id,
             "person_name": payload.person_name,
-            "Prioridade": payload.priority,
+            "priority": payload.priority,
             "categoria": payload.category,
             "status": "esperando",
             "created_at": now_iso,

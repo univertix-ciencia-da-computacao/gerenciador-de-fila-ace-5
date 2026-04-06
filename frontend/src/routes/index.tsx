@@ -3,7 +3,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import DefaultLayout from '../layouts/DefaultLayout';
 import Home from '../pages/Login';
 import Register from '../pages/DashboardAdmin';
-
+import DashboardTv from '../pages/DashboardTv';
 export const router = createBrowserRouter([
 
   // Rota pública
@@ -11,6 +11,11 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: <Home />,
+  },
+
+    {
+    path: '/dashboard-tv',
+    element: <DashboardTv />,
   },
 
   // Rotas privadas (dentro do DefaultLayout)

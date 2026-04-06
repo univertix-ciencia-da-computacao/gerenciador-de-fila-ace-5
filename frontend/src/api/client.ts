@@ -1,9 +1,11 @@
+import { ApiError } from './errors/ApiError';
+
 const BASE_URL = import.meta.env.VITE_API_URL as string;
 
 export async function fetchClient<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const defaultHeaders = {
+
+  const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
-    //tokens de autorização se tiver
   };
 
   const response = await fetch(`${BASE_URL}${endpoint}`, {
@@ -15,8 +17,21 @@ export async function fetchClient<T>(endpoint: string, options: RequestInit = {}
   });
 
   if (!response.ok) {
-    //erros de requisição (400, 500...)
-    throw new Error(`Erro na API: ${response.statusText}`);
+    let errorMessage = `Erro na API: ${response.statusText}`;
+    let errorDetails = null;
+
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.detail || errorData.message || errorData.error || errorMessage;
+      errorDetails = errorData;
+    } catch (e) {}
+
+
+    throw new ApiError(errorMessage, response.status, errorDetails);
+  }
+
+  if (response.status === 204) {
+    return {} as T;
   }
 
   return response.json() as Promise<T>;

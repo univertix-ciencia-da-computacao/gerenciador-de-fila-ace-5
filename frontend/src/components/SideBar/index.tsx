@@ -1,0 +1,1 @@
+//sidebar fica aqui pq usa em todo o sistema na rota privada

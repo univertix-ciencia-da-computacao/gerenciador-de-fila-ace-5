@@ -1,11 +1,11 @@
 import { useNavigate } from 'react-router-dom';
-import BotaoEntrar from '../../components/BotaoEntrar';
+import ButtonEnter from '../../components/ButtonEnter';
 
 export default function Home() {
   const navigate = useNavigate();
 
   const handleEntrar = () => {
-    navigate('/teste');
+    navigate('/dashboard');
   };
 
   return (
@@ -45,7 +45,7 @@ export default function Home() {
 
         
         <div className="w-full flex justify-center">
-          <BotaoEntrar onClick={handleEntrar} className="w-full" />
+          <ButtonEnter onClick={handleEntrar} className="w-full" />
         </div>
         
       </div>

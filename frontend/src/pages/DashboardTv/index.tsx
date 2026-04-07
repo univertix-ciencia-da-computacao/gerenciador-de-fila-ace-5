@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-// Importando o seu novo hook!
 import { useQueue } from '../../hooks/useQueue';
 
 // Função que dispara o som do alerta (Estilo Ding-Dong clássico)
@@ -11,7 +10,7 @@ const playBeep = () => {
       const oscillator = audioCtx.createOscillator();
       const gainNode = audioCtx.createGain();
 
-      oscillator.type = 'triangle'; 
+      oscillator.type = 'triangle';
       oscillator.frequency.value = frequencia;
 
       gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime + tempoInicio);
@@ -24,6 +23,7 @@ const playBeep = () => {
       oscillator.stop(audioCtx.currentTime + tempoInicio + duracao);
     };
 
+    // Frequências para o efeito "Ding-Dong"
     playNote(880, 0, 0.6); 
     playNote(659, 0.4, 1.2); 
 
@@ -36,46 +36,28 @@ const playBeep = () => {
 const DashboardTv: React.FC = () => {
   const [painelIniciado, setPainelIniciado] = useState(false);
   
-  // Utilizando o seu novo hook useQueue
-  const { data, isLoading, isError } = useQueue();
-  const previousCurrentId = useRef<string | null>(null);
+  const { data, isLoading, isError } = useQueue('default', { 
+    refetchInterval: 5000 
+  });
 
 
-// 🛡️ Proteção Inteligente ajustada para o TypeScript:
-  const listaPacientes = useMemo(() => {
-    if (!data) return [];
-        if (Array.isArray(data)) return data;
-            const dadosSeguros = data as any;
-            
-    return dadosSeguros.entries || dadosSeguros.pacientes || dadosSeguros.items || [];
-  }, [data]);
+  const previousTicket = useRef<string | null>(null);
 
-  const filaOrdenada = useMemo(() => {
-    if (!listaPacientes.length) return [];
-    return [...listaPacientes].sort((a, b) => new Date(a.dataEntrada).getTime() - new Date(b.dataEntrada).getTime());
-  }, [listaPacientes]);
 
-  const current = useMemo(() => {
-    if (!filaOrdenada.length) return null;
-    const emAtendimento = filaOrdenada.find((item) => item.status === 'em_atendimento');
-    return emAtendimento || filaOrdenada.find((item) => item.status === 'aguardando') || null;
-  }, [filaOrdenada]);
+  const currentEntry = data?.current_entry;
+  const history = data?.last_called || [];
 
-  const ultimasChamadas = useMemo(() => {
-    if (!filaOrdenada.length) return [];
-    return [...filaOrdenada]
-      .filter((item) => item.status !== 'aguardando')
-      .sort((a, b) => new Date(b.dataEntrada).getTime() - new Date(a.dataEntrada).getTime())
-      .slice(0, 4);
-  }, [filaOrdenada]);
 
   useEffect(() => {
-    if (!current || !painelIniciado) return;
-    if (previousCurrentId.current && previousCurrentId.current !== current.id) {
+    if (!currentEntry || !painelIniciado) return;
+
+    if (previousTicket.current && previousTicket.current !== currentEntry.ticket) {
       playBeep();
     }
-    previousCurrentId.current = current.id;
-  }, [current, painelIniciado]);
+    
+    previousTicket.current = currentEntry.ticket;
+  }, [currentEntry, painelIniciado]);
+
 
   if (!painelIniciado) {
     return (
@@ -85,7 +67,7 @@ const DashboardTv: React.FC = () => {
             setPainelIniciado(true);
             playBeep();
           }}
-          className="bg-white text-blue-600 text-3xl font-bold px-12 py-8 rounded-lg hover:bg-blue-50 transition shadow-lg"
+          className="bg-white text-blue-600 text-3xl font-bold px-12 py-8 rounded-lg hover:bg-blue-50 transition shadow-lg active:scale-95"
         >
           ▶ Iniciar Painel
         </button>

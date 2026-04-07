@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useQueue } from '../../hooks/useQueue';
 
 // Função que dispara o som do alerta (Estilo Ding-Dong clássico)
@@ -23,7 +23,6 @@ const playBeep = () => {
       oscillator.stop(audioCtx.currentTime + tempoInicio + duracao);
     };
 
-    // Frequências para o efeito "Ding-Dong"
     playNote(880, 0, 0.6); 
     playNote(659, 0.4, 1.2); 
 
@@ -40,13 +39,10 @@ const DashboardTv: React.FC = () => {
     refetchInterval: 5000 
   });
 
-
   const previousTicket = useRef<string | null>(null);
-
 
   const currentEntry = data?.current_entry;
   const history = data?.last_called || [];
-
 
   useEffect(() => {
     if (!currentEntry || !painelIniciado) return;
@@ -57,7 +53,6 @@ const DashboardTv: React.FC = () => {
     
     previousTicket.current = currentEntry.ticket;
   }, [currentEntry, painelIniciado]);
-
 
   if (!painelIniciado) {
     return (
@@ -77,17 +72,14 @@ const DashboardTv: React.FC = () => {
 
   return (
     <div className="h-screen w-screen bg-blue-600 text-white overflow-hidden">
-      {/* Grid: esquerda e direita */}
       <div className="grid grid-cols-2 h-full gap-4 p-4">
         {/* ===== ESQUERDA: CONSULTÓRIO + ÚLTIMAS CHAMADAS ===== */}
         <div className="flex flex-col gap-4">
-          {/* Consultório número (gigante) */}
           <div className="bg-white rounded-lg p-6 flex flex-col flex-shrink-0 shadow-md">
             <p className="text-blue-500 text-sm font-bold uppercase">Consultório</p>
             <p className="text-blue-600 text-8xl font-black">04</p>
           </div>
 
-          {/* Últimas Chamadas */}
           <div className="bg-white rounded-lg p-4 flex-1 overflow-hidden shadow-md">
             <p className="text-blue-500 text-xs font-bold uppercase mb-3">Últimas Chamadas</p>
             <div className="space-y-2 overflow-y-auto max-h-96">
@@ -95,12 +87,13 @@ const DashboardTv: React.FC = () => {
                 <p className="text-gray-400 text-sm">Carregando...</p>
               ) : isError ? (
                 <p className="text-red-500 text-sm">Erro na conexão</p>
-              ) : ultimasChamadas.length === 0 ? (
+              ) : history.length === 0 ? (
                 <p className="text-gray-400 text-sm">Nenhuma chamada</p>
               ) : (
-                ultimasChamadas.map((item, idx) => (
-                  <div key={item.id} className="bg-blue-50 p-2 rounded text-blue-900 text-sm font-semibold border border-blue-100">
-                    {idx + 1}. {item.nome}
+                history.map((item, idx) => (
+                  <div key={item.ticket} className="bg-blue-50 p-2 rounded text-blue-900 text-sm font-semibold border border-blue-100 flex justify-between">
+                    <span>{idx + 1}. {item.person_name}</span>
+                    <span className="text-blue-400">{item.ticket}</span>
                   </div>
                 ))
               )}
@@ -110,17 +103,22 @@ const DashboardTv: React.FC = () => {
 
         {/* ===== DIREITA: PACIENTE ATUAL ===== */}
         <div className="flex flex-col gap-4">
-          {/* Paciente em Atendimento */}
           <div className="bg-white rounded-lg p-6 flex flex-col justify-center flex-1 min-h-0 shadow-md">
             <p className="text-blue-500 text-sm font-bold uppercase mb-4">Paciente</p>
             <p className="text-blue-600 text-6xl font-black text-center break-words leading-tight">
-              {current?.nome || '-'}
+              {currentEntry?.person_name || '-'}
             </p>
+            {currentEntry?.ticket && (
+              <p className="text-center text-amber-500 text-2xl font-bold mt-4">
+                SENHA: {currentEntry.ticket}
+              </p>
+            )}
           </div>
 
-          {/* Consultório destino */}
           <div className="bg-blue-800 rounded-lg p-6 text-center flex-shrink-0 shadow-md">
-            <p className="text-white text-2xl font-black">PSF CENTRO</p>
+            <p className="text-white text-2xl font-black">
+              {data?.unit_id || 'PSF CENTRO'}
+            </p>
           </div>
         </div>
       </div>

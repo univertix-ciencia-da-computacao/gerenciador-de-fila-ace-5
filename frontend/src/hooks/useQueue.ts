@@ -1,16 +1,17 @@
 import { toast } from 'react-hot-toast';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import { queueService } from '../services/queueService';
 import { ApiError } from '../api/errors/ApiError';
-import type { AddEntryResponse } from '../api/types/queue';
+import type { AddEntryResponse, Queue } from '../api/types/queue';
 
-
-export function useQueue(unitId: string = 'default') {
-  return useQuery({
-    
-    queryKey: ['fila-pacientes', unitId], 
-    
-    queryFn: () => queueService.getQueue(unitId), 
+export function useQueue(
+  unitId: string = 'default',
+  options?: Omit<UseQueryOptions<Queue, unknown, Queue>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery<Queue, unknown, Queue>({
+    queryKey: ['fila-pacientes', unitId],
+    queryFn: () => queueService.getQueue(unitId),
+    ...options,
   });
 }
 

@@ -1,7 +1,8 @@
+from datetime import datetime, timezone
 from fastapi import Depends
 
 from app.core.config import Settings, get_settings
-from app.core.exceptions import FeatureNotImplementedError
+from app.core.exceptions import FeatureNotImplementedError, AppException
 from app.repositories.queue_repository import QueueRepository, get_queue_repository
 from app.schemas.position import PositionSnapshotData
 from app.schemas.queue import (
@@ -14,26 +15,19 @@ from app.schemas.queue import (
     QueueSnapshotData,
 )
 
-
 class QueueService:
     def __init__(self, queue_repository: QueueRepository, settings: Settings) -> None:
         self.queue_repository = queue_repository
         self.api_prefix = settings.api_prefix
 
     def create_entry(self, payload: QueueEntryCreateRequest) -> QueueEntryCreatedResult:
-        raise FeatureNotImplementedError(
-            "A criação de entradas da fila será implementada futuramente "
-        )
+        raise FeatureNotImplementedError()
 
     def call_next(self, payload: QueueActionRequest) -> QueueActionResult:
-        raise FeatureNotImplementedError(
-            "A chamada da próxima senha será implementada futuramente "
-        )
+        raise FeatureNotImplementedError()
 
     def finish_current(self, payload: QueueActionRequest) -> QueueActionResult:
-        raise FeatureNotImplementedError(
-            "A finalização do atendimento atual será implementada futuramente "
-        )
+        raise FeatureNotImplementedError()
 
     def get_queue_snapshot(self, unit_id: str) -> QueueSnapshotData:
         waiting_entries = self.queue_repository.fetch_waiting_entries(unit_id)
@@ -52,12 +46,48 @@ class QueueService:
         )
 
     def get_position_snapshot(self, token: str) -> PositionSnapshotData:
-        raise FeatureNotImplementedError(
-            "A consulta detalhada da posição será implementada futuramente "
-        )
+        self._require_entry(token)
+        raise FeatureNotImplementedError()
 
     def try_get_position_snapshot(self, token: str) -> PositionSnapshotData | None:
         return None
+
+    def _now(self) -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    def _require_entry(self, token: str) -> dict:
+        entrada = self.queue_repository.fetch_queue_entry_by_token(token)
+        
+        if not entrada:
+            raise AppException(
+                message="Token de posição não encontrado.",
+                status_code=404,
+                code="POSITION_NOT_FOUND"
+            )
+        return entrada
+
+    def _build_queue_entry_record(
+        self, 
+        payload: QueueEntryCreateRequest, 
+        qr_token: str, 
+        ticket: str, 
+        ticket_sequence: int
+    ) -> dict:
+        now_iso = self._now()
+        return {
+            "qr_token": qr_token,
+            "ticket_sequence": ticket_sequence,
+            "Ingresso": ticket,
+            "unit_id": payload.unit_id,
+            "person_name": payload.person_name,
+            "priority": payload.priority,
+            "categoria": payload.category,
+            "status": "esperando",
+            "created_at": now_iso,
+            "updated_at": now_iso,
+            "called_at": "Nenhuma",
+            "finished_at": "Nenhum",
+        }
 
     @staticmethod
     def _build_entry_summary(entry: dict) -> QueueEntrySummary:
@@ -79,7 +109,6 @@ class QueueService:
             status=entry["status"],
             called_at=entry.get("called_at"),
         )
-
 
 def get_queue_service(
     queue_repository: QueueRepository = Depends(get_queue_repository),

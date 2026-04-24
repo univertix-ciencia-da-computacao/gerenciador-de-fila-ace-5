@@ -8,15 +8,15 @@ export default function Register() {
     const { data: queueData, isLoading } = useQueue();
 
     return (
-        // Layout principal em duas colunas, max-w centralizado
-        <div className="flex gap-10 w-full max-w-screen-2xl mx-auto bg-gray-50 min-h-full font-sans">
-             
+        // Layout principal em duas colunas
+        <div className="flex gap-8 w-full max-w-screen-2xl mx-auto min-h-full font-sans">
+
             {/* COLUNA ESQUERDA: Formulário e Estatísticas */}
             <div className="flex-1 flex flex-col gap-6">
 
                 <div>
-                    <h1 className="text-3xl font-extrabold text-blue-900 tracking-tight">Registro de Novo Paciente</h1>
-                    <p className="text-slate-500 mt-1">Preencha os dados abaixo para adicionar o paciente à fila atual.</p>
+                    <h1 className="text-3xl font-extrabold text-blue-900 tracking-tight">Novo Cadastro de Paciente</h1>
+                    <p className="text-slate-500 mt-1">Cadastre o Paciente</p>
                 </div>
 
                 {/* Componente especializado no formulário */}
@@ -27,7 +27,7 @@ export default function Register() {
 
             </div>
 
-            {/* COLUNA DIREITA: Lista Lateral (Sidebar da Fila) */}
+            {/* COLUNA DIREITA: Atividade Recente */}
             <QueueList queueData={queueData} isLoading={isLoading} />
 
         </div>

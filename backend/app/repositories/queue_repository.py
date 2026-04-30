@@ -1,5 +1,6 @@
 from functools import lru_cache
 from typing import Any
+from datetime import datetime
 
 from fastapi import Depends
 
@@ -164,6 +165,44 @@ class QueueRepository:
 
         last_sequence = response.data[0].get("ticket_sequence") or 0
         return int(last_sequence) + 1
+
+    def finish_entry(self, entry: dict[str, Any]) -> dict[str, Any]:
+        try:
+            response = (
+                self.supabase_service.get_client()
+                .table(self.settings.supabase_queue_entries_table)
+                .update(
+                    {
+                        "status": "finished",
+                        "finished_at": datetime.utcnow().isoformat(),
+                    }
+                )
+                .eq("id", entry["id"])
+                .execute()
+            )
+        except Exception as exc:
+            raise ExternalServiceError(
+                "Falha ao finalizar atendimento no Supabase."
+            ) from exc
+
+        if not getattr(response, "data", None):
+            raise ExternalServiceError(
+                "Nenhuma entrada foi finalizada no Supabase."
+            )
+
+        updated_entry = response.data[0]
+
+        self.create_queue_event(
+            {
+                "unit_id": updated_entry["unit_id"],
+                "event_type": "finished",
+                "ticket": updated_entry["ticket"],
+                "qr_token": updated_entry["qr_token"],
+                "payload": {"status": "finished"}
+            }
+        )
+
+        return updated_entry
 
     def _insert_record(
         self,

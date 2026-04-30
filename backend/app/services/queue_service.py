@@ -1,4 +1,4 @@
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 
 from app.core.config import Settings, get_settings
 from app.core.exceptions import FeatureNotImplementedError
@@ -31,10 +31,41 @@ class QueueService:
         )
 
     def finish_current(self, payload: QueueActionRequest) -> QueueActionResult:
-        raise FeatureNotImplementedError(
-            "A finalização do atendimento atual será implementada futuramente "
-        )
+        unit_id = payload.unit_id
 
+        current_entry = self.queue_repository.fetch_current_called_entry(unit_id)
+
+        if not current_entry:
+            raise HTTPException(
+                status_code=404,
+                detail="QUEUE_NO_CURRENT_ENTRY",
+            )
+
+        finished_entry = self.queue_repository.finish_entry(current_entry)
+
+        snapshot = self.get_queue_snapshot(unit_id)
+
+        # Mapeamento 100% fiel ao banco de dados + os campos virtuais exigidos pela API
+        entry_data = {
+            "id": finished_entry["id"],
+            "unit_id": finished_entry["unit_id"],
+            "ticket_sequence": finished_entry["ticket_sequence"],
+            "ticket": finished_entry["ticket"],
+            "person_name": finished_entry["person_name"],
+            "priority": finished_entry["priority"],
+            "category": finished_entry.get("category"),
+            "status": finished_entry["status"],
+            "position_token": finished_entry["qr_token"],
+            "position_path": f"{self.api_prefix}/queue/{finished_entry['qr_token']}/position",
+            "created_at": finished_entry["created_at"],
+            "called_at": finished_entry.get("called_at"),
+            "finished_at": finished_entry.get("finished_at"),
+        }
+
+        return QueueActionResult(
+            entry=entry_data,
+            queue=snapshot,
+        )
     def get_queue_snapshot(self, unit_id: str) -> QueueSnapshotData:
         waiting_entries = self.queue_repository.fetch_waiting_entries(unit_id)
         current_entry = self.queue_repository.fetch_current_called_entry(unit_id)

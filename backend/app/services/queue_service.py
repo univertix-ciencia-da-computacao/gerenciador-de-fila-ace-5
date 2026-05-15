@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import Depends, HTTPException
 
 from app.core.config import Settings, get_settings
@@ -21,8 +23,92 @@ class QueueService:
         self.api_prefix = settings.api_prefix
 
     def create_entry(self, payload: QueueEntryCreateRequest) -> QueueEntryCreatedResult:
-        raise FeatureNotImplementedError(
-            "A criação de entradas da fila será implementada futuramente "
+        unit_id = payload.unit_id
+
+        ticket_sequence = self.queue_repository.get_next_ticket_sequence(unit_id)
+        ticket = f"A{ticket_sequence:03d}"
+        qr_token = uuid.uuid4().hex
+
+        position_path = f"{self.api_prefix}/position/{qr_token}"
+
+        created_entry = self.queue_repository.create_queue_entry(
+            {
+                "unit_id": unit_id,
+                "ticket_sequence": ticket_sequence,
+                "ticket": ticket,
+                "person_name": payload.person_name,
+                "priority": payload.priority,
+                "category": payload.category,
+                "status": "waiting",
+                "qr_token": qr_token,
+            }
+        )
+
+        self.queue_repository.create_qr_link(
+            {
+                "qr_token": qr_token,
+                "unit_id": unit_id,
+                "ticket": ticket,
+                "position_path": position_path,
+            }
+        )
+
+        self.queue_repository.create_queue_event(
+            {
+                "unit_id": unit_id,
+                "event_type": "created",
+                "ticket": ticket,
+                "qr_token": qr_token,
+                "payload": {"status": "waiting"},
+            }
+        )
+
+        snapshot = self.get_queue_snapshot(unit_id)
+
+        waiting_entries = self.queue_repository.fetch_waiting_entries(unit_id)
+        position_index = next(
+            (
+                index + 1
+                for index, entry in enumerate(waiting_entries)
+                if entry["qr_token"] == qr_token
+            ),
+            len(waiting_entries),
+        )
+        people_ahead = position_index - 1
+
+        current_entry = self.queue_repository.fetch_current_called_entry(unit_id)
+
+        position_snapshot = PositionSnapshotData(
+            token=qr_token,
+            unit_id=unit_id,
+            ticket=ticket,
+            status="waiting",
+            position=position_index,
+            people_ahead=people_ahead,
+            current_ticket=current_entry["ticket"] if current_entry else None,
+            position_path=position_path,
+        )
+
+        entry_data = {
+            "id": created_entry["id"],
+            "unit_id": created_entry["unit_id"],
+            "ticket_sequence": created_entry["ticket_sequence"],
+            "ticket": created_entry["ticket"],
+            "person_name": created_entry["person_name"],
+            "priority": created_entry["priority"],
+            "category": created_entry.get("category"),
+            "status": created_entry["status"],
+            "position_token": created_entry["qr_token"],
+            "position_path": position_path,
+            "created_at": created_entry["created_at"],
+            "called_at": created_entry.get("called_at"),
+            "finished_at": created_entry.get("finished_at"),
+        }
+
+        return QueueEntryCreatedResult(
+            entry=entry_data,
+            position=position_snapshot,
+            queue=snapshot,
         )
 
     def call_next(self, payload: QueueActionRequest) -> QueueActionResult:

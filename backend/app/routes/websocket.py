@@ -53,6 +53,25 @@ async def _send_queue_snapshot(
     )
 
 
+async def _send_position_snapshot(
+    *,
+    websocket: WebSocket,
+    token: str,
+    queue_service: QueueService,
+    connection_manager: ConnectionManager,
+) -> None:
+    snapshot = queue_service.get_position_snapshot(token)
+    await connection_manager.send(
+        websocket,
+        WebSocketServerMessage(
+            type="position.snapshot",
+            channel="position",
+            resource_id=token,
+            data=snapshot.model_dump(),
+        ),
+    )
+
+
 @router.websocket("/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
@@ -134,19 +153,6 @@ async def websocket_endpoint(
                 continue
 
             if client_message.type == "subscribe":
-                if channel == "position":
-                    await _send_error(
-                        websocket,
-                        connection_manager,
-                        code="NOT_IMPLEMENTED",
-                        message=(
-                            "O canal de posição está previsto, mas será "
-                            "implementado."
-                        ),
-                        resource_id=resource_id,
-                    )
-                    continue
-
                 connection_manager.subscribe(websocket, channel, resource_id)
                 await connection_manager.send(
                     websocket,
@@ -157,6 +163,15 @@ async def websocket_endpoint(
                         data={"ok": True},
                     ),
                 )
+                if channel == "position":
+                    await _send_position_snapshot(
+                        websocket=websocket,
+                        token=resource_id,
+                        queue_service=queue_service,
+                        connection_manager=connection_manager,
+                    )
+                    continue
+
                 await _send_queue_snapshot(
                     websocket=websocket,
                     unit_id=resource_id,

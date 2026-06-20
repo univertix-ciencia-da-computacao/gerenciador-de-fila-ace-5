@@ -6,6 +6,7 @@ create table if not exists public.queue_entries (
     person_name text not null,
     priority boolean not null default false,
     category text,
+    risk_classification text not null default 'nao_urgente',
     status text not null default 'waiting',
     qr_token text not null unique,
     created_at timestamptz not null default timezone('utc', now()),
@@ -15,6 +16,9 @@ create table if not exists public.queue_entries (
 
 alter table public.queue_entries
     add column if not exists ticket_sequence integer;
+
+alter table public.queue_entries
+    add column if not exists risk_classification text not null default 'nao_urgente';
 
 update public.queue_entries
 set ticket_sequence = nullif(regexp_replace(ticket, '\D', '', 'g'), '')::integer
@@ -44,7 +48,7 @@ create unique index if not exists idx_queue_entries_unit_ticket_sequence
 create index if not exists idx_queue_entries_unit_status
     on public.queue_entries (unit_id, status);
 create index if not exists idx_queue_entries_waiting_order
-    on public.queue_entries (unit_id, status, priority desc, ticket_sequence asc);
+    on public.queue_entries (unit_id, status, risk_classification, ticket_sequence asc);
 create index if not exists idx_queue_entries_ticket on public.queue_entries (ticket);
 create index if not exists idx_queue_events_unit on public.queue_events (unit_id);
 create index if not exists idx_queue_events_type on public.queue_events (event_type);

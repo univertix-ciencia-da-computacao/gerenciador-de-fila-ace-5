@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 
-from app.schemas.position import PositionSnapshotData
+from app.schemas.position import PositionSnapshotData, RiskClassification
 
 
 class QueueEntryCreateRequest(BaseModel):
@@ -24,6 +24,10 @@ class QueueEntryCreateRequest(BaseModel):
         default=None,
         max_length=60,
         description="Categoria opcional do atendimento.",
+    )
+    risk_classification: RiskClassification = Field(
+        default="nao_urgente",
+        description="Classificação de risco clínica da pessoa na fila.",
     )
 
     @field_validator("person_name", "unit_id", "category", mode="before")
@@ -57,6 +61,10 @@ class QueueEntryData(BaseModel):
         default=None,
         description="Categoria opcional associada ao atendimento.",
     )
+    risk_classification: RiskClassification = Field(
+        default="nao_urgente",
+        description="Classificação de risco usada para ordenar a fila.",
+    )
     status: str = Field(..., description="Estado atual da senha na fila.")
     position_token: str = Field(
         ..., description="Token único usado para consulta da posição da senha."
@@ -82,6 +90,10 @@ class QueueEntrySummary(BaseModel):
     category: str | None = Field(
         default=None,
         description="Categoria opcional do atendimento.",
+    )
+    risk_classification: RiskClassification = Field(
+        default="nao_urgente",
+        description="Classificação de risco usada para ordenar a fila.",
     )
     status: str = Field(..., description="Estado atual da senha.")
 

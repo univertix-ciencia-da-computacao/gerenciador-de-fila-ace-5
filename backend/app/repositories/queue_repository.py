@@ -1,6 +1,6 @@
+from datetime import datetime
 from functools import lru_cache
 from typing import Any
-from datetime import datetime
 
 from fastapi import Depends
 
@@ -144,6 +144,32 @@ class QueueRepository:
         entries = self.fetch_waiting_entries(unit_id)
         return entries[0] if entries else None
 
+    def call_entry(self, entry: dict[str, Any]) -> dict[str, Any]:
+        try:
+            response = (
+                self.supabase_service.get_client()
+                .table(self.settings.supabase_queue_entries_table)
+                .update(
+                    {
+                        "status": "called",
+                        "called_at": datetime.utcnow().isoformat(),
+                    }
+                )
+                .eq("id", entry["id"])
+                .execute()
+            )
+        except Exception as exc:
+            raise ExternalServiceError(
+                "Falha ao chamar próxima entrada da fila no Supabase."
+            ) from exc
+
+        if not getattr(response, "data", None):
+            raise ExternalServiceError(
+                "Nenhuma entrada foi chamada no Supabase."
+            )
+
+        return response.data[0]
+
     def get_next_ticket_sequence(self, unit_id: str) -> int:
         try:
             response = (
@@ -198,7 +224,7 @@ class QueueRepository:
                 "event_type": "finished",
                 "ticket": updated_entry["ticket"],
                 "qr_token": updated_entry["qr_token"],
-                "payload": {"status": "finished"}
+                "payload": {"status": "finished"},
             }
         )
 

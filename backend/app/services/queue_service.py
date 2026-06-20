@@ -1,7 +1,8 @@
+from uuid import uuid4
+
 from fastapi import Depends, HTTPException
 
 from app.core.config import Settings, get_settings
-from app.core.exceptions import FeatureNotImplementedError
 from app.repositories.queue_repository import QueueRepository, get_queue_repository
 from app.schemas.position import PositionSnapshotData
 from app.schemas.queue import (
@@ -14,6 +15,20 @@ from app.schemas.queue import (
     QueueSnapshotData,
 )
 
+RISK_CLASSIFICATION_WEIGHT = {
+    "emergencia": 0,
+    "muito_urgente": 1,
+    "urgente": 2,
+    "pouco_urgente": 3,
+    "nao_urgente": 4,
+}
+
+PRIORITY_RISK_CLASSIFICATIONS = {
+    "emergencia",
+    "muito_urgente",
+    "urgente",
+}
+
 
 class QueueService:
     def __init__(self, queue_repository: QueueRepository, settings: Settings) -> None:
@@ -21,13 +36,82 @@ class QueueService:
         self.api_prefix = settings.api_prefix
 
     def create_entry(self, payload: QueueEntryCreateRequest) -> QueueEntryCreatedResult:
-        raise FeatureNotImplementedError(
-            "A criação de entradas da fila será implementada futuramente "
+        unit_id = payload.unit_id
+        ticket_sequence = self.queue_repository.get_next_ticket_sequence(unit_id)
+        ticket = f"{ticket_sequence:03d}"
+        qr_token = uuid4().hex
+        position_path = f"{self.api_prefix}/position/{qr_token}"
+        risk_classification = payload.risk_classification
+
+        entry = self.queue_repository.create_queue_entry(
+            {
+                "unit_id": unit_id,
+                "ticket_sequence": ticket_sequence,
+                "ticket": ticket,
+                "person_name": payload.person_name,
+                "priority": risk_classification in PRIORITY_RISK_CLASSIFICATIONS,
+                "category": payload.category,
+                "risk_classification": risk_classification,
+                "status": "waiting",
+                "qr_token": qr_token,
+            }
+        )
+        self.queue_repository.create_qr_link(
+            {
+                "qr_token": qr_token,
+                "unit_id": unit_id,
+                "ticket": ticket,
+                "position_path": position_path,
+            }
+        )
+        self.queue_repository.create_queue_event(
+            {
+                "unit_id": unit_id,
+                "event_type": "created",
+                "ticket": ticket,
+                "qr_token": qr_token,
+                "payload": {
+                    "risk_classification": risk_classification,
+                    "status": "waiting",
+                },
+            }
+        )
+
+        return QueueEntryCreatedResult(
+            entry=self._build_entry_data(entry),
+            position=self._build_position_snapshot(entry),
+            queue=self.get_queue_snapshot(unit_id),
         )
 
     def call_next(self, payload: QueueActionRequest) -> QueueActionResult:
-        raise FeatureNotImplementedError(
-            "A chamada da próxima senha será implementada futuramente "
+        entry = self.queue_repository.fetch_next_waiting_entry(payload.unit_id)
+
+        if not entry:
+            raise HTTPException(
+                status_code=404,
+                detail="QUEUE_NO_WAITING_ENTRY",
+            )
+
+        called_entry = self.queue_repository.call_entry(entry)
+        self.queue_repository.create_queue_event(
+            {
+                "unit_id": called_entry["unit_id"],
+                "event_type": "called",
+                "ticket": called_entry["ticket"],
+                "qr_token": called_entry["qr_token"],
+                "payload": {
+                    "risk_classification": called_entry.get(
+                        "risk_classification",
+                        "nao_urgente",
+                    ),
+                    "status": "called",
+                },
+            }
+        )
+
+        return QueueActionResult(
+            entry=self._build_entry_data(called_entry),
+            queue=self.get_queue_snapshot(payload.unit_id),
         )
 
     def finish_current(self, payload: QueueActionRequest) -> QueueActionResult:
@@ -45,29 +129,15 @@ class QueueService:
 
         snapshot = self.get_queue_snapshot(unit_id)
 
-        # Mapeamento 100% fiel ao banco de dados + os campos virtuais exigidos pela API
-        entry_data = {
-            "id": finished_entry["id"],
-            "unit_id": finished_entry["unit_id"],
-            "ticket_sequence": finished_entry["ticket_sequence"],
-            "ticket": finished_entry["ticket"],
-            "person_name": finished_entry["person_name"],
-            "priority": finished_entry["priority"],
-            "category": finished_entry.get("category"),
-            "status": finished_entry["status"],
-            "position_token": finished_entry["qr_token"],
-            "position_path": f"{self.api_prefix}/queue/{finished_entry['qr_token']}/position",
-            "created_at": finished_entry["created_at"],
-            "called_at": finished_entry.get("called_at"),
-            "finished_at": finished_entry.get("finished_at"),
-        }
-
         return QueueActionResult(
-            entry=entry_data,
+            entry=self._build_entry_data(finished_entry),
             queue=snapshot,
         )
+
     def get_queue_snapshot(self, unit_id: str) -> QueueSnapshotData:
-        waiting_entries = self.queue_repository.fetch_waiting_entries(unit_id)
+        waiting_entries = self._sort_waiting_entries(
+            self.queue_repository.fetch_waiting_entries(unit_id)
+        )
         current_entry = self.queue_repository.fetch_current_called_entry(unit_id)
         last_called_entry = self.queue_repository.fetch_last_called_entry(unit_id)
 
@@ -83,12 +153,85 @@ class QueueService:
         )
 
     def get_position_snapshot(self, token: str) -> PositionSnapshotData:
-        raise FeatureNotImplementedError(
-            "A consulta detalhada da posição será implementada futuramente "
-        )
+        entry = self.queue_repository.fetch_queue_entry_by_token(token)
+
+        if not entry:
+            raise HTTPException(
+                status_code=404,
+                detail="POSITION_NOT_FOUND",
+            )
+
+        return self._build_position_snapshot(entry)
 
     def try_get_position_snapshot(self, token: str) -> PositionSnapshotData | None:
-        return None
+        entry = self.queue_repository.fetch_queue_entry_by_token(token)
+
+        if not entry:
+            return None
+
+        return self._build_position_snapshot(entry)
+
+    def _build_entry_data(self, entry: dict) -> dict:
+        return {
+            "unit_id": entry["unit_id"],
+            "ticket": entry["ticket"],
+            "person_name": entry["person_name"],
+            "priority": entry["priority"],
+            "category": entry.get("category"),
+            "risk_classification": entry.get("risk_classification", "nao_urgente"),
+            "status": entry["status"],
+            "position_token": entry["qr_token"],
+            "position_path": f"{self.api_prefix}/position/{entry['qr_token']}",
+            "created_at": entry["created_at"],
+            "called_at": entry.get("called_at"),
+            "finished_at": entry.get("finished_at"),
+        }
+
+    def _build_position_snapshot(self, entry: dict) -> PositionSnapshotData:
+        waiting_entries = self._sort_waiting_entries(
+            self.queue_repository.fetch_waiting_entries(entry["unit_id"])
+        )
+        waiting_tokens = [
+            waiting_entry["qr_token"] for waiting_entry in waiting_entries
+        ]
+        current_entry = self.queue_repository.fetch_current_called_entry(
+            entry["unit_id"]
+        )
+
+        if entry["status"] == "waiting" and entry["qr_token"] in waiting_tokens:
+            position = waiting_tokens.index(entry["qr_token"]) + 1
+            people_ahead = position - 1
+        else:
+            position = None
+            people_ahead = None
+
+        return PositionSnapshotData(
+            token=entry["qr_token"],
+            unit_id=entry["unit_id"],
+            ticket=entry["ticket"],
+            person_name=entry.get("person_name"),
+            category=entry.get("category"),
+            risk_classification=entry.get("risk_classification", "nao_urgente"),
+            status=entry["status"],
+            position=position,
+            people_ahead=people_ahead,
+            current_ticket=current_entry["ticket"] if current_entry else None,
+            position_path=f"{self.api_prefix}/position/{entry['qr_token']}",
+        )
+
+    @staticmethod
+    def _sort_waiting_entries(entries: list[dict]) -> list[dict]:
+        return sorted(
+            entries,
+            key=lambda entry: (
+                RISK_CLASSIFICATION_WEIGHT.get(
+                    entry.get("risk_classification", "nao_urgente"),
+                    RISK_CLASSIFICATION_WEIGHT["nao_urgente"],
+                ),
+                entry["ticket_sequence"],
+                entry["created_at"],
+            ),
+        )
 
     @staticmethod
     def _build_entry_summary(entry: dict) -> QueueEntrySummary:
@@ -97,6 +240,7 @@ class QueueService:
             person_name=entry["person_name"],
             priority=entry["priority"],
             category=entry.get("category"),
+            risk_classification=entry.get("risk_classification", "nao_urgente"),
             status=entry["status"],
         )
 
@@ -107,6 +251,7 @@ class QueueService:
             person_name=entry["person_name"],
             priority=entry["priority"],
             category=entry.get("category"),
+            risk_classification=entry.get("risk_classification", "nao_urgente"),
             status=entry["status"],
             called_at=entry.get("called_at"),
         )

@@ -18,6 +18,7 @@ const INITIAL_STATE: AddEntryRequest = {
   unit_id: "default",
   priority: false,
   category: "clinico-geral",
+  risk_classification: "nao_urgente",
 };
 
 export function RegisterForm() {
@@ -87,19 +88,22 @@ export function RegisterForm() {
         {/* Selects lado a lado */}
         <div className="flex gap-4">
           <div className="flex-1 flex flex-col gap-2">
-            <label htmlFor="priority" className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Nível de Urgência
+            <label htmlFor="risk_classification" className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Classificação de Risco
             </label>
             <select
-              id="priority"
-              name="priority"
-              value={formData.priority.toString()}
+              id="risk_classification"
+              name="risk_classification"
+              value={formData.risk_classification}
               onChange={handleInputChange}
               disabled={isPending}
               className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-800 focus:ring-2 focus:ring-blue-600 outline-none cursor-pointer"
             >
-              <option value="false">Normal</option>
-              <option value="true">Urgente / Prioritário</option>
+              <option value="emergencia">Emergência</option>
+              <option value="muito_urgente">Muito urgente</option>
+              <option value="urgente">Urgente</option>
+              <option value="pouco_urgente">Pouco urgente</option>
+              <option value="nao_urgente">Não urgente</option>
             </select>
           </div>
 
@@ -110,7 +114,7 @@ export function RegisterForm() {
             <select
               id="category"
               name="category"
-              value={formData.category}
+              value={formData.category ?? ''}
               onChange={handleInputChange}
               disabled={isPending}
               className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-800 focus:ring-2 focus:ring-blue-600 outline-none cursor-pointer"

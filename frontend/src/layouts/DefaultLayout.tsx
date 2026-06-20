@@ -3,7 +3,6 @@ import {
   UserPlus,
   Monitor,
   AlignJustify,
-  BarChart2,
   HelpCircle,
   LogOut,
   Clock,
@@ -13,10 +12,9 @@ import {
 } from 'lucide-react';
 
 const navItems = [
-  { to: '/dashboard', icon: UserPlus, label: 'Registro' },
-  { to: '/painel-tv', icon: Monitor, label: 'Painel TV' },
-  { to: '/fila-vivo', icon: AlignJustify, label: 'Fila ao Vivo' },
-  { to: '/analises', icon: BarChart2, label: 'Análises' },
+  { to: '/dashboard', icon: AlignJustify, label: 'Controle' },
+  { to: '/dashboard/inscricao', icon: UserPlus, label: 'Inscrição' },
+  { to: '/dashboard/fila', icon: Monitor, label: 'Painel TV' },
 ];
 
 export default function DefaultLayout() {

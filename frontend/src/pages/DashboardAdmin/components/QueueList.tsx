@@ -1,4 +1,4 @@
-import type { Queue } from '../../../api/types/queue';
+import type { Queue, RiskClassification } from '../../../api/types/queue';
 import { Clock, User, AlertTriangle } from 'lucide-react';
 
 //não precisa colocar em types, é apenas visual nao comunica com backend
@@ -7,26 +7,54 @@ interface FilaListaProps {
   isLoading: boolean;
 }
 
-// Mapeia prioridade para estilo visual
-const getPriorityStyle = (priority: boolean) => {
-  if (priority) {
-    return {
-      borderLeft: 'border-l-orange-400',
-      iconBg: 'bg-orange-100',
-      iconColor: 'text-orange-500',
-      badgeBg: 'bg-orange-100 text-orange-600',
-      label: 'URGENTE',
-      Icon: AlertTriangle,
-    };
-  }
-  return {
+const riskStyles: Record<RiskClassification, {
+  borderLeft: string;
+  iconBg: string;
+  iconColor: string;
+  badgeBg: string;
+  label: string;
+  Icon: typeof AlertTriangle;
+}> = {
+  emergencia: {
+    borderLeft: 'border-l-red-600',
+    iconBg: 'bg-red-100',
+    iconColor: 'text-red-700',
+    badgeBg: 'bg-red-100 text-red-700',
+    label: 'EMERGÊNCIA',
+    Icon: AlertTriangle,
+  },
+  muito_urgente: {
+    borderLeft: 'border-l-orange-500',
+    iconBg: 'bg-orange-100',
+    iconColor: 'text-orange-600',
+    badgeBg: 'bg-orange-100 text-orange-700',
+    label: 'MUITO URGENTE',
+    Icon: AlertTriangle,
+  },
+  urgente: {
+    borderLeft: 'border-l-yellow-500',
+    iconBg: 'bg-yellow-100',
+    iconColor: 'text-yellow-700',
+    badgeBg: 'bg-yellow-100 text-yellow-800',
+    label: 'URGENTE',
+    Icon: AlertTriangle,
+  },
+  pouco_urgente: {
+    borderLeft: 'border-l-green-500',
+    iconBg: 'bg-green-100',
+    iconColor: 'text-green-700',
+    badgeBg: 'bg-green-100 text-green-700',
+    label: 'POUCO URGENTE',
+    Icon: User,
+  },
+  nao_urgente: {
     borderLeft: 'border-l-blue-400',
     iconBg: 'bg-blue-100',
     iconColor: 'text-blue-500',
     badgeBg: 'bg-blue-100 text-blue-700',
-    label: 'NORMAL',
+    label: 'NÃO URGENTE',
     Icon: User,
-  };
+  },
 };
 
 export function QueueList({ queueData, isLoading }: FilaListaProps) {
@@ -48,7 +76,7 @@ export function QueueList({ queueData, isLoading }: FilaListaProps) {
         )}
 
         {queueData?.queue?.map((entry) => {
-          const style = getPriorityStyle(entry.priority);
+          const style = riskStyles[entry.risk_classification];
           const { Icon } = style;
           return (
             <div
@@ -66,7 +94,7 @@ export function QueueList({ queueData, isLoading }: FilaListaProps) {
                   {entry.person_name}
                 </span>
                 <span className="text-xs text-slate-500 capitalize mb-1">
-                  {entry.category.replace(/-/g, ' ')} • #{entry.ticket}
+                  {(entry.category ?? 'sem categoria').replace(/-/g, ' ')} • #{entry.ticket}
                 </span>
                 <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md w-fit ${style.badgeBg}`}>
                   {style.label}

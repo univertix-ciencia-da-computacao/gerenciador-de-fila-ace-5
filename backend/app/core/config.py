@@ -13,6 +13,7 @@ class Settings(BaseSettings):
 
     supabase_url: str | None = None
     supabase_key: str | None = None
+    supabase_jwt_secret: str | None = None
     supabase_queue_entries_table: str = "queue_entries"
     supabase_queue_events_table: str = "queue_events"
     supabase_qr_links_table: str = "qr_links"

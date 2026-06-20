@@ -6,7 +6,7 @@ import jwt
 from fastapi.security import HTTPAuthorizationCredentials
 
 from app.core.dependencies import require_staff
-from app.core.exceptions import AuthenticationError
+from app.core.exceptions import AuthenticationError, ConfigurationError
 from app.core.security import decode_supabase_token
 
 SECRET = "test-secret-value-at-least-32-bytes-long"
@@ -56,6 +56,21 @@ class RequireStaffTest(unittest.TestCase):
 
     def test_invalid_token_raises(self) -> None:
         creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="garbage")
+        with self.assertRaises(AuthenticationError):
+            require_staff(credentials=creds, settings=_settings())
+
+    def test_missing_jwt_secret_raises_configuration_error(self) -> None:
+        creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=make_token())
+        with self.assertRaises(ConfigurationError):
+            require_staff(credentials=creds, settings=SimpleNamespace(supabase_jwt_secret=None))
+
+    def test_token_without_identity_claims_raises(self) -> None:
+        token = jwt.encode(
+            {"aud": "authenticated", "exp": int(time.time()) + 3600},
+            SECRET,
+            algorithm="HS256",
+        )
+        creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
         with self.assertRaises(AuthenticationError):
             require_staff(credentials=creds, settings=_settings())
 

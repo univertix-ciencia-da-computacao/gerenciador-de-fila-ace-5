@@ -30,4 +30,8 @@ def require_staff(
         raise AuthenticationError("Token de autenticação ausente.")
 
     claims = decode_supabase_token(credentials.credentials, settings.supabase_jwt_secret)
-    return StaffUser(id=str(claims.get("sub", "")), email=str(claims.get("email", "")))
+    sub = claims.get("sub")
+    email = claims.get("email")
+    if not sub or not email:
+        raise AuthenticationError("Token sem identidade de usuário.")
+    return StaffUser(id=str(sub), email=str(email))

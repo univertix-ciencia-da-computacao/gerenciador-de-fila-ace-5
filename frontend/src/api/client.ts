@@ -24,7 +24,9 @@ export async function fetchClient<T>(endpoint: string, options: RequestInit = {}
       const errorData = await response.json();
       errorMessage = errorData.detail || errorData.message || errorData.error || errorMessage;
       errorDetails = errorData;
-    } catch (e) {}
+    } catch {
+      errorDetails = null;
+    }
 
 
     throw new ApiError(errorMessage, response.status, errorDetails);

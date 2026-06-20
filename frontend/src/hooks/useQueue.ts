@@ -4,12 +4,13 @@ import { queueService } from '../services/queueService';
 import { ApiError } from '../api/errors/ApiError';
 import type { AddEntryResponse } from '../api/types/queue';
 
+export const queueKeys = {
+  queue: (unitId: string) => ['fila-pacientes', unitId] as const,
+};
 
 export function useQueue(unitId: string = 'default') {
   return useQuery({
-    
-    queryKey: ['fila-pacientes', unitId], 
-    
+    queryKey: queueKeys.queue(unitId), 
     queryFn: () => queueService.getQueue(unitId), 
   });
 }
@@ -22,7 +23,7 @@ export function useAddEntry() {
     mutationFn: queueService.addEntry, 
     
     onSuccess: (response: AddEntryResponse) => {
-      const { entry, queue } = response.data;
+      const { entry, queue } = response;
 
       // 1. Guarda tokens de acompanhamento
       if (entry.position_token && entry.position_path) {
@@ -31,7 +32,7 @@ export function useAddEntry() {
       }
 
       // 2. Atualiza a fila local - usar smp a msm key do useQueue
-      queryClient.setQueryData(['fila-pacientes', queue.unit_id], queue);
+      queryClient.setQueryData(queueKeys.queue(queue.unit_id), queue);
     },
     
     onError: (error: unknown) => { 
@@ -43,5 +44,43 @@ export function useAddEntry() {
         toast.error('Erro de conexão ou instabilidade no servidor.');
       }
     }
+  });
+}
+
+export function useCallNext(unitId: string = 'default') {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => queueService.callNext(unitId),
+    onSuccess: (response) => {
+      queryClient.setQueryData(queueKeys.queue(response.queue.unit_id), response.queue);
+    },
+    onError: (error: unknown) => {
+      if (error instanceof ApiError) {
+        toast.error(error.message || 'Não foi possível chamar o próximo paciente.');
+        return;
+      }
+
+      toast.error('Erro de conexão ou instabilidade no servidor.');
+    },
+  });
+}
+
+export function useFinishCurrent(unitId: string = 'default') {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => queueService.finishCurrent(unitId),
+    onSuccess: (response) => {
+      queryClient.setQueryData(queueKeys.queue(response.queue.unit_id), response.queue);
+    },
+    onError: (error: unknown) => {
+      if (error instanceof ApiError) {
+        toast.error(error.message || 'Não foi possível finalizar o atendimento.');
+        return;
+      }
+
+      toast.error('Erro de conexão ou instabilidade no servidor.');
+    },
   });
 }

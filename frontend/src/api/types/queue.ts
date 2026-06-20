@@ -1,49 +1,72 @@
-// base pra reutilizar em algumas interfaces
-interface BaseIdentity {
-  unit_id: string;
-  ticket: string;
-  status: 'waiting' | 'called' | 'finished';
-  position_path: string;
-}
+export type QueueEntryStatus = 'waiting' | 'called' | 'finished';
 
-//registro do paciente entrando na fila
-export interface Entry extends BaseIdentity {
+export type RiskClassification =
+  | 'emergencia'
+  | 'muito_urgente'
+  | 'urgente'
+  | 'pouco_urgente'
+  | 'nao_urgente';
+
+export interface QueueEntrySummary {
+  ticket: string;
   person_name: string;
   priority: boolean;
-  category: string;
-  position_token: string;
-  created_at?: string;
-  called_at?: string | null;   
-  finished_at?: string | null; 
+  category: string | null;
+  risk_classification: RiskClassification;
+  status: QueueEntryStatus;
 }
 
-export interface Position extends BaseIdentity {
-  token: string; 
+export interface CurrentQueueEntry extends QueueEntrySummary {
+  called_at: string | null;
+}
+
+export interface Entry extends QueueEntrySummary {
+  unit_id: string;
+  position_token: string;
+  position_path: string;
+  created_at: string;
+  called_at: string | null;
+  finished_at: string | null;
+}
+
+export interface Position {
+  token: string;
+  unit_id: string;
+  ticket: string;
+  person_name: string | null;
+  category: string | null;
+  risk_classification: RiskClassification;
+  status: QueueEntryStatus;
   position: number | null;
-  people_ahead: number;
+  people_ahead: number | null;
   current_ticket: string | null;
+  position_path: string;
 }
 
 export interface Queue {
   unit_id: string;
   current_ticket: string | null;
-  current_entry: Entry | null;      
-  last_called: Entry[] | null;       
+  current_entry: CurrentQueueEntry | null;
+  last_called: string | null;
   waiting_count: number;
-  // Usamos Pick para garantir que a lista da fila seja leve (sem tokens/paths pesados)
-  queue: Pick<Entry, 'ticket' | 'person_name' | 'priority' | 'category' | 'status'>[];
+  queue: QueueEntrySummary[];
 }
 
-//enviamos para o backend
-export interface AddEntryRequest extends Pick<Entry, 'person_name' | 'unit_id' | 'priority' | 'category'> {}
+export interface AddEntryRequest {
+  person_name: string;
+  unit_id: string;
+  priority: boolean;
+  category: string | null;
+  risk_classification: RiskClassification;
+}
 
-//backend devolve
 export interface AddEntryResponse {
-  success: boolean;
-  message: string;
-  data: {
-    entry: Entry;
-    position: Position;
-    queue: Queue;
-  };
+  entry: Entry;
+  position: Position;
+  queue: Queue;
+}
+
+export interface QueueActionResponse {
+  entry: Entry;
+  queue: Queue;
 }

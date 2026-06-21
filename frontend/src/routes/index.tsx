@@ -20,6 +20,10 @@ export const router = createBrowserRouter([
     path: '/acompanhar/:token',
     element: <PatientTracking />,
   },
+  {
+    path: '/painel-tv',
+    element: <DashboardQueue />,
+  },
 
   // Rotas privadas (dentro do DefaultLayout)
 

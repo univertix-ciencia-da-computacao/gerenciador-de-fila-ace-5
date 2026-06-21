@@ -7,7 +7,7 @@ export default function DashboardQueue() {
   const current = data?.current_entry;
 
   return (
-    <div className="flex min-h-full flex-col gap-6 bg-slate-950 p-8 text-white">
+    <div className="flex min-h-screen flex-col gap-6 bg-slate-950 p-8 text-white">
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Monitor className="h-8 w-8 text-cyan-300" />

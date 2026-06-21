@@ -6,6 +6,7 @@ import Register from '../pages/DashboardAdmin';
 import DashboardQueue from '../pages/DashboardQueue';
 import DashboardRegistration from '../pages/DashboardRegistration';
 import PatientTracking from '../pages/PatientTracking';
+import ProtectedRoute from './ProtectedRoute';
 
 export const router = createBrowserRouter([
 
@@ -23,21 +24,25 @@ export const router = createBrowserRouter([
   // Rotas privadas (dentro do DefaultLayout)
 
   {
-    element: <DefaultLayout />,
+    element: <ProtectedRoute />,
     children: [
       {
-        path: '/dashboard',
-        element: <Register />,
+        element: <DefaultLayout />,
+        children: [
+          {
+            path: '/dashboard',
+            element: <Register />,
+          },
+          {
+            path: '/dashboard/inscricao',
+            element: <DashboardRegistration />,
+          },
+          {
+            path: '/dashboard/fila',
+            element: <DashboardQueue />,
+          },
+        ],
       },
-      {
-        path: '/dashboard/inscricao',
-        element: <DashboardRegistration />,
-      },
-      {
-        path: '/dashboard/fila',
-        element: <DashboardQueue />,
-      },
-
     ],
   },
 

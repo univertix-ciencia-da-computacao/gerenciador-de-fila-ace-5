@@ -1,4 +1,4 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   UserPlus,
   Monitor,
@@ -11,6 +11,8 @@ import {
   UserCircle2,
 } from 'lucide-react';
 
+import { useAuth } from '../auth/AuthContext';
+
 const navItems = [
   { to: '/dashboard', icon: AlignJustify, label: 'Controle' },
   { to: '/dashboard/inscricao', icon: UserPlus, label: 'Inscrição' },
@@ -18,6 +20,14 @@ const navItems = [
 ];
 
 export default function DefaultLayout() {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/', { replace: true });
+  };
+
   return (
     <div className="flex h-screen w-full bg-gray-50 overflow-hidden font-sans">
 
@@ -64,13 +74,13 @@ export default function DefaultLayout() {
             <HelpCircle className="w-4 h-4 shrink-0" />
             Ajuda
           </button>
-          <NavLink
-            to="/"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-blue-200 hover:bg-blue-800 hover:text-red-400 transition-colors text-sm font-medium"
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-blue-200 hover:bg-blue-800 hover:text-red-400 transition-colors text-sm font-medium w-full text-left"
           >
             <LogOut className="w-4 h-4 shrink-0" />
             Sair
-          </NavLink>
+          </button>
         </div>
       </aside>
 

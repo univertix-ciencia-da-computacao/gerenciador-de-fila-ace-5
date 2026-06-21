@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     def supabase_enabled(self) -> bool:
         return bool(self.supabase_url and self.supabase_key)
 
+    @property
+    def supabase_jwks_url(self) -> str | None:
+        if not self.supabase_url:
+            return None
+        return f"{self.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -22,14 +22,19 @@ def require_staff(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
     settings: Settings = Depends(get_settings),
 ) -> StaffUser:
-    if not settings.supabase_jwt_secret:
+    jwks_url = getattr(settings, "supabase_jwks_url", None)
+    if not settings.supabase_jwt_secret and not jwks_url:
         raise ConfigurationError(
-            "SUPABASE_JWT_SECRET é obrigatório para autenticar operadores."
+            "SUPABASE_JWT_SECRET ou SUPABASE_URL é obrigatório para autenticar operadores."
         )
     if credentials is None or not credentials.credentials:
         raise AuthenticationError("Token de autenticação ausente.")
 
-    claims = decode_supabase_token(credentials.credentials, settings.supabase_jwt_secret)
+    claims = decode_supabase_token(
+        credentials.credentials,
+        settings.supabase_jwt_secret,
+        jwks_url=jwks_url,
+    )
     sub = claims.get("sub")
     email = claims.get("email")
     if not sub or not email:

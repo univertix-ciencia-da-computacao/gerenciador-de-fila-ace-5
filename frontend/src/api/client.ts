@@ -1,11 +1,14 @@
 import { ApiError } from './errors/ApiError';
+import { tokenStorage } from '../auth/tokenStorage';
 
 const BASE_URL = import.meta.env.VITE_API_URL as string;
 
 export async function fetchClient<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
 
+  const token = tokenStorage.get();
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
   const response = await fetch(`${BASE_URL}${endpoint}`, {

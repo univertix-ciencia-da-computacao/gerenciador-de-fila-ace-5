@@ -13,6 +13,7 @@ class Settings(BaseSettings):
 
     supabase_url: str | None = None
     supabase_key: str | None = None
+    supabase_jwt_secret: str | None = None
     supabase_queue_entries_table: str = "queue_entries"
     supabase_queue_events_table: str = "queue_events"
     supabase_qr_links_table: str = "qr_links"
@@ -27,6 +28,12 @@ class Settings(BaseSettings):
     @property
     def supabase_enabled(self) -> bool:
         return bool(self.supabase_url and self.supabase_key)
+
+    @property
+    def supabase_jwks_url(self) -> str | None:
+        if not self.supabase_url:
+            return None
+        return f"{self.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
 
 
 @lru_cache

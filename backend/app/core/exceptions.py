@@ -28,3 +28,11 @@ class FeatureNotImplementedError(AppException):
         message: str = "Funcionalidade prevista, mas ainda não implementada.",
     ) -> None:
         super().__init__(message, status_code=501, code="NOT_IMPLEMENTED")
+
+
+class AuthenticationError(AppException):
+    def __init__(
+        self,
+        message: str = "Credenciais de autenticação inválidas.",
+    ) -> None:
+        super().__init__(message, status_code=401, code="AUTH_INVALID_TOKEN")

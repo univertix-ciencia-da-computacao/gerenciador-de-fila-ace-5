@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from app.core.config import get_settings
 from app.core.error_handlers import register_exception_handlers
+from app.routes.auth import router as auth_router
 from app.routes.health import router as health_router
 from app.routes.position import router as position_router
 from app.routes.queue import router as queue_router
@@ -30,6 +31,7 @@ def create_application() -> FastAPI:
     register_exception_handlers(application)
 
     application.include_router(health_router, prefix=settings.api_prefix)
+    application.include_router(auth_router, prefix=settings.api_prefix)
     application.include_router(queue_router, prefix=settings.api_prefix)
     application.include_router(position_router, prefix=settings.api_prefix)
     application.include_router(websocket_router, prefix=settings.api_prefix)

@@ -1,0 +1,128 @@
+import time
+import unittest
+from types import SimpleNamespace
+from unittest import mock
+
+import jwt
+from cryptography.hazmat.primitives.asymmetric import ec
+from fastapi.security import HTTPAuthorizationCredentials
+
+from app.core.dependencies import require_staff
+from app.core.exceptions import AuthenticationError, ConfigurationError
+from app.core.security import decode_supabase_token
+
+SECRET = "test-secret-value-at-least-32-bytes-long"
+
+
+def make_token(**overrides: object) -> str:
+    payload: dict[str, object] = {
+        "sub": "user-123",
+        "email": "staff@example.com",
+        "aud": "authenticated",
+        "exp": int(time.time()) + 3600,
+    }
+    payload.update(overrides)
+    return jwt.encode(payload, SECRET, algorithm="HS256")
+
+
+class DecodeSupabaseTokenTest(unittest.TestCase):
+    def test_valid_token_returns_claims(self) -> None:
+        claims = decode_supabase_token(make_token(), SECRET)
+        self.assertEqual(claims["email"], "staff@example.com")
+        self.assertEqual(claims["sub"], "user-123")
+
+    def test_wrong_secret_raises(self) -> None:
+        with self.assertRaises(AuthenticationError):
+            decode_supabase_token(make_token(), "outro-segredo-value-at-least-32-bytes")
+
+    def test_expired_token_raises(self) -> None:
+        token = make_token(exp=int(time.time()) - 10)
+        with self.assertRaises(AuthenticationError):
+            decode_supabase_token(token, SECRET)
+
+
+def _settings() -> object:
+    return SimpleNamespace(supabase_jwt_secret=SECRET)
+
+
+class RequireStaffTest(unittest.TestCase):
+    def test_valid_bearer_returns_staff_user(self) -> None:
+        creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=make_token())
+        user = require_staff(credentials=creds, settings=_settings())
+        self.assertEqual(user.email, "staff@example.com")
+        self.assertEqual(user.id, "user-123")
+
+    def test_missing_credentials_raises(self) -> None:
+        with self.assertRaises(AuthenticationError):
+            require_staff(credentials=None, settings=_settings())
+
+    def test_invalid_token_raises(self) -> None:
+        creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="garbage")
+        with self.assertRaises(AuthenticationError):
+            require_staff(credentials=creds, settings=_settings())
+
+    def test_missing_jwt_secret_raises_configuration_error(self) -> None:
+        creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=make_token())
+        with self.assertRaises(ConfigurationError):
+            require_staff(credentials=creds, settings=SimpleNamespace(supabase_jwt_secret=None))
+
+    def test_token_without_identity_claims_raises(self) -> None:
+        token = jwt.encode(
+            {"aud": "authenticated", "exp": int(time.time()) + 3600},
+            SECRET,
+            algorithm="HS256",
+        )
+        creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+        with self.assertRaises(AuthenticationError):
+            require_staff(credentials=creds, settings=_settings())
+
+
+def _es256_token(private_key: ec.EllipticCurvePrivateKey, **overrides: object) -> str:
+    payload: dict[str, object] = {
+        "sub": "user-es256",
+        "email": "staff-es256@example.com",
+        "aud": "authenticated",
+        "exp": int(time.time()) + 3600,
+    }
+    payload.update(overrides)
+    return jwt.encode(payload, private_key, algorithm="ES256", headers={"kid": "test-kid"})
+
+
+class DecodeAsymmetricTokenTest(unittest.TestCase):
+    JWKS_URL = "https://project.supabase.co/auth/v1/.well-known/jwks.json"
+
+    def _fake_jwks_client(self, public_key: object) -> object:
+        return SimpleNamespace(
+            get_signing_key_from_jwt=lambda _token: SimpleNamespace(key=public_key)
+        )
+
+    def test_es256_token_verified_via_jwks(self) -> None:
+        private_key = ec.generate_private_key(ec.SECP256R1())
+        token = _es256_token(private_key)
+        with mock.patch(
+            "app.core.security._get_jwks_client",
+            return_value=self._fake_jwks_client(private_key.public_key()),
+        ):
+            claims = decode_supabase_token(token, jwks_url=self.JWKS_URL)
+        self.assertEqual(claims["email"], "staff-es256@example.com")
+        self.assertEqual(claims["sub"], "user-es256")
+
+    def test_es256_wrong_key_raises(self) -> None:
+        signing_key = ec.generate_private_key(ec.SECP256R1())
+        unrelated_key = ec.generate_private_key(ec.SECP256R1())
+        token = _es256_token(signing_key)
+        with mock.patch(
+            "app.core.security._get_jwks_client",
+            return_value=self._fake_jwks_client(unrelated_key.public_key()),
+        ):
+            with self.assertRaises(AuthenticationError):
+                decode_supabase_token(token, jwks_url=self.JWKS_URL)
+
+    def test_es256_without_jwks_url_raises(self) -> None:
+        token = _es256_token(ec.generate_private_key(ec.SECP256R1()))
+        with self.assertRaises(AuthenticationError):
+            decode_supabase_token(token, jwks_url=None)
+
+
+if __name__ == "__main__":
+    unittest.main()

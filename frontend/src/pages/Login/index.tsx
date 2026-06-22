@@ -1,12 +1,28 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { User, Lock, LogIn, Users, Clock, ShieldCheck } from 'lucide-react';
+
+import { useAuth } from '../../auth/AuthContext';
 
 export default function Home() {
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleEntrar = (e: React.FormEvent) => {
+  const handleEntrar = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/dashboard');
+    setSubmitting(true);
+    try {
+      await login(email, password);
+      navigate('/dashboard');
+    } catch {
+      toast.error('Email ou senha inválidos.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -86,8 +102,10 @@ export default function Home() {
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 <input
-                  type="text"
-                  placeholder="Digite sua matrícula"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Digite seu email"
                   className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-slate-800 focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm shadow-sm"
                 />
               </div>
@@ -101,6 +119,8 @@ export default function Home() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 <input
                   type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-slate-800 focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm shadow-sm"
                 />
@@ -109,7 +129,8 @@ export default function Home() {
 
             <button
               type="submit"
-              className="mt-2 w-full bg-blue-900 hover:bg-blue-950 text-white font-bold py-3.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md active:scale-[0.98]"
+              disabled={submitting}
+              className="mt-2 w-full bg-blue-900 hover:bg-blue-950 disabled:opacity-60 text-white font-bold py-3.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md active:scale-[0.98]"
             >
               <LogIn className="w-4 h-4" />
               Entrar

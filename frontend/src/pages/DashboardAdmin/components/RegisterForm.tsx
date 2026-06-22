@@ -4,7 +4,6 @@ import type { AddEntryRequest } from "../../../api/types/queue";
 import { toast } from "react-hot-toast";
 import { User, PlusCircle } from "lucide-react";
 
-// Pode organizar as lista dentro de src/{cria-pasta}/nome.ts (OPCIONAL)
 const ESPECIALIDADES = [
   { id: "clinico-geral", label: "Clínico Geral" },
   { id: "ortopedia", label: "Ortopedia" },
@@ -12,7 +11,6 @@ const ESPECIALIDADES = [
   { id: "pediatria", label: "Pediatria" },
 ] as const;
 
-// Pode organizar as lista dentro de src/{cria-pasta}/nome.ts (OPCIONAL)
 const INITIAL_STATE: AddEntryRequest = {
   person_name: "",
   unit_id: "default",
@@ -26,14 +24,13 @@ export function RegisterForm() {
   const [error, setError] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const name = e.target.name as keyof AddEntryRequest; // Cast para garantir o tipo das chaves
+    const name = e.target.name as keyof AddEntryRequest;
     const value = e.target.value;
 
     if (name === "person_name" && error) setError(false);
 
     setFormData((prev) => ({
       ...prev,
-      // Lógica para converter string de priority em boolean
       [name]: name === "priority" ? value === "true" : value,
     }));
   };
@@ -56,7 +53,7 @@ export function RegisterForm() {
   };
 
   return (
-    <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
+    <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200">
       <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
 
         {/* Campo Nome */}
@@ -84,8 +81,9 @@ export function RegisterForm() {
           {error && <span className="text-red-500 text-xs italic">Nome inválido ou muito curto.</span>}
         </div>
 
-        {/* Selects lado a lado */}
-        <div className="flex gap-4">
+        {/* Selects: empilhados no mobile, lado a lado no sm+ */}
+        {/* MUDANÇA: era "flex gap-4", agora "flex flex-col sm:flex-row gap-4" */}
+        <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 flex flex-col gap-2">
             <label htmlFor="priority" className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Nível de Urgência

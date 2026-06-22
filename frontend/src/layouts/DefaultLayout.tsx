@@ -1,4 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom';
+import { useState } from 'react';
 import {
   UserPlus,
   Monitor,
@@ -10,6 +11,8 @@ import {
   Bell,
   Settings,
   UserCircle2,
+  Menu,
+  X,
 } from 'lucide-react';
 
 const navItems = [
@@ -20,13 +23,34 @@ const navItems = [
 ];
 
 export default function DefaultLayout() {
+  // MUDANÇA: estado para controlar sidebar aberta/fechada no mobile
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
+    // MUDANÇA: overflow-hidden no root evita scroll horizontal
     <div className="flex h-screen w-full bg-gray-50 overflow-hidden font-sans">
 
-      {/* Sidebar */}
-      <aside className="w-52 bg-blue-900 text-white flex flex-col h-full flex-shrink-0">
+      {/* Overlay escuro no mobile quando sidebar está aberta */}
+      {/* MUDANÇA: bloco novo — cobre o conteúdo atrás da sidebar no mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-20 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-        {/* Logo / Identidade */}
+      {/* Sidebar */}
+      {/* MUDANÇA: no mobile fica fora do fluxo (fixed), desliza com translate */}
+      {/* No desktop (lg+) volta ao comportamento original (relative, sempre visível) */}
+      <aside
+        className={`
+          fixed lg:relative z-30 lg:z-auto
+          w-52 bg-blue-900 text-white flex flex-col h-full flex-shrink-0
+          transition-transform duration-300
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}
+      >
+        {/* Logo */}
         <div className="px-5 py-6 flex items-center gap-3 select-none border-b border-blue-800 flex-shrink-0">
           <div className="bg-gradient-to-br from-blue-400 to-emerald-400 text-blue-900 p-2 rounded-xl shadow-lg shrink-0">
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -46,6 +70,7 @@ export default function DefaultLayout() {
             <NavLink
               key={to}
               to={to}
+              onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
                   isActive
@@ -76,26 +101,34 @@ export default function DefaultLayout() {
         </div>
       </aside>
 
-      {/* Área principal com header + conteúdo */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
+      {/* Área principal */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
 
-        {/* Header / Topo */}
-        <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between flex-shrink-0">
+        {/* Header */}
+        <header className="bg-white border-b border-slate-200 px-4 sm:px-8 py-4 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-slate-800">Gerenciamento de Fila</h2>
-            <span className="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+            {/* MUDANÇA: botão hamburguer visível só no mobile */}
+            <button
+              className="lg:hidden text-slate-500 hover:text-slate-800 transition-colors"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Abrir menu"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <h2 className="text-base sm:text-lg font-bold text-slate-800">Gerenciamento de Fila</h2>
+            <span className="hidden sm:inline bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
               Portal Admin
             </span>
           </div>
-          <div className="flex items-center gap-4 text-slate-400">
-            <button className="hover:text-slate-600 transition-colors">
+          <div className="flex items-center gap-3 sm:gap-4 text-slate-400">
+            <button className="hover:text-slate-600 transition-colors hidden sm:block">
               <Clock className="w-5 h-5" />
             </button>
             <button className="hover:text-slate-600 transition-colors relative">
               <Bell className="w-5 h-5" />
               <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
             </button>
-            <button className="hover:text-slate-600 transition-colors">
+            <button className="hover:text-slate-600 transition-colors hidden sm:block">
               <Settings className="w-5 h-5" />
             </button>
             <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden">
@@ -105,7 +138,8 @@ export default function DefaultLayout() {
         </header>
 
         {/* Conteúdo da Página */}
-        <main className="flex-1 overflow-auto p-8">
+        {/* MUDANÇA: padding menor no mobile */}
+        <main className="flex-1 overflow-auto p-4 sm:p-8">
           <Outlet />
         </main>
 
